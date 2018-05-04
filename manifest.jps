@@ -1,0 +1,139 @@
+type: update
+version: 1.4
+
+id: openvpn-as
+name: OpenVPN Access Server
+baseUrl: https://raw.githubusercontent.com/SlavaKatiukha/openvpn-as/master
+logo: images/logo.png
+
+homepage: https://www.openvpn.net/
+description:
+  short: Full featured secure network tunneling VPN
+  text: |
+    OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
+    capabilities, enterpri se management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
+    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
+    including secure and granular remote access to internal network and/ or private cloud network resources and applications with
+    fine-grained access control.
+    <div class='warning-lower' style='color:#b7c3da'>
+    **Note** that the Public IP and Firewall will be activated for your environment automatically.
+    </div>
+
+targetNodes:
+  nodeType:
+    - tomcat6
+    - tomcat7
+    - tomcat8
+    - tomcat85
+    - tomcat9
+    - tomcat
+    - tomee
+    - tomee-dockerized
+    - glassfish3
+    - glassfish4
+    - glassfish
+    - jetty6
+    - apache
+    - apache2
+    - nginxphp
+    - apache2-ruby
+    - nginx-ruby
+    - nginx
+    - nginx-dockerized
+    - nginxphp-dockerized
+    - haproxy
+    - apache-lb
+    - varnish
+    - varnish-dockerized
+    - payara
+    - centos6
+    - centos7
+
+globals:
+  group: ${targetNodes.nodeGroup}
+  username: openvpn
+  password: ${fn.password(10)}
+  workDir: /usr/local/openvpn_as
+  iptablesCustom: /etc/sysconfig/iptables-custom
+  ovpn: ${globals.workDir}/scripts
+  ovpnPortUDP: 1194
+  ovpnPortTCP: 443
+  webUiPort: 943
+
+onInstall:
+  - setExtIpEnabled [${globals.group}]: true
+  - installVPN
+  - setupFirewallAndShowSuccess
+
+onUninstall:
+  - cmd [${globals.group}]: |-
+      rpm -e openvpn-as
+      rm -rf ${globals.workDir}
+      sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
+      /usr /bin/jem firewall fwstart
+    user: root
+
+actions:
+  installVPN:
+    - cmd [${globals.group}]: |-
+        yum update iptables -y
+        rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm
+        echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && ${globals.ovpn}/confdba -mk - 'vpn.server.daemon.tcp.n_daemons' -v '1'
+        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
+        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
+        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
+        ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
+      user: root
+
+  setupFirewall:
+    - cmd [${globals.group}]: >
+        curl '${baseUrl}/scripts/iptables-custom' |
+        sed 's/{{PUBLIC_IP}}/${this.ip}/g;
+             s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
+             s/{{OVPN_TCP_PORT}}/${globals.ovpnPortTCP}/g;
+             s/{{OVPN_WEB_PORT}}/${globals.webUiPort}/g;' >> ${globals.iptablesCustom};
+        sed -i s/FIREWALL_ENABLED=0/FIREWALL_ENABLED=1/g /etc/jelastic/metainf.conf;
+        /usr/bin/jem firewall fwstart;
+      user: root
+
+  setupFirewallAndShowSuccess:
+    script [${globals.group}]: |
+      var resp = jelastic.env.control.GetEnvInfo("${env.name}", session);
+      if (resp.result !== 0) return resp;
+      var nodes = resp.nodes;
+
+      var publicIP;
+      for (i = nodes.length; i--;) {
+        if (nodes[i].nodeGroup == nodeGroup && nodes[i].ismaster) {
+          publicIP =  nodes[i].extIPs[0];
+        }
+      }
+
+      return {
+        result: 0,
+        onAfterReturn: [{
+          "setupFirewall" : {
+            "ip" : publicIP
+          }
+        }, {
+          "return" : {
+            "type": "success",
+            "message": success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}")
+          }
+        }]
+      };
+    success: |
+      #### Admin UI is available here: [{{URI}}/admin]({{URI}}/admin)
+
+      Enter the access credentials below to connect:
+      * Username: **${globals.username}**
+      * Password: **${globals.password}**
+
+      Connection profiles can be downloaded using [Client UI]({{URI}}).
+
+      #### To download the OpenVPN Connect app, please choose a platform below:
+      * [OpenVPN Connect for Windows]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
+      * [OpenVPN Connect for Mac OS X]({{URI}}/generic/openvpn-connect-2.5.0.112_signed.dmg)
+      * [OpenVPN Connect for Android](http://openvpn.net/clients/index.php?client=openvpn_connect_android)
+      * [OpenVPN Connect for iOS](http://openvpn.net/clients/index.php?client=openvpn_connect_ios)
+      * [OpenVPN for Linux](http://openvpn.net/clients/index.php?client=openvpn_linux)
