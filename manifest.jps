@@ -13,10 +13,10 @@ description:
     OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
     capabilities, enterpri se management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
     accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
-    including secure and granular remote access to internal network and/ or private cloud network resources and applications with
+    including secure and granular remote access to internal network and/or private cloud network resources and applications with
     fine-grained access control.
     <div class='warning-lower' style='color:#b7c3da'>
-    **Note** that the Public IP and Firewall will be activated for your environment automatically.
+    <b>Note</b> that the Public IP and Firewall will be activated for your environment automatically.
     </div>
 
 targetNodes:
