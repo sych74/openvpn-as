@@ -99,8 +99,8 @@ actions:
       user: root    
       
   cleanIptablesCustom:
-    cmd [${globals.group}]: >
-      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
+    cmd [${globals.group}]: |-
+      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0      
     user: root
     
   setupFirewallAndShowSuccess:
@@ -116,7 +116,9 @@ actions:
           break;
         }
       }
-
+      
+      var message = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");  
+     
       return {
         result: 0,
         onAfterReturn: [{
@@ -126,7 +128,8 @@ actions:
         }, {
           "return" : {
             "type": "success",
-            "message": success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}")
+            "message": message,
+            "email": message
           }
         }]
       };
