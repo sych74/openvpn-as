@@ -76,7 +76,7 @@ onUninstall:
 
 actions:
   installVPN:
-    - cmd [${globals.group}]: |
+    - cmd [${globals.group}]: |-
         yum update iptables -y
         rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm        
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
