@@ -66,12 +66,12 @@ onInstall:
   - setupFirewallAndShowSuccess
 
 onUninstall:
+  - cleanIptablesCustom
   - cmd [${globals.group}]: |-
       rpm -e openvpn-as
       rm -rf ${globals.workDir}
-      sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
-      /usr /bin/jem firewall fwstart
-    user: root
+      /usr/bin/jem firewall fwstart
+    user: root  
 
 actions:
   installVPN:
@@ -86,7 +86,8 @@ actions:
       user: root
 
   setupFirewall:
-    - cmd [${globals.group}]: >
+    - cleanIptablesCustom
+    - cmd [${globals.group}]:
         curl '${baseUrl}/scripts/iptables-custom' |
         sed 's/{{PUBLIC_IP}}/${this.ip}/g;
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
@@ -94,8 +95,12 @@ actions:
              s/{{OVPN_WEB_PORT}}/${globals.webUiPort}/g;' >> ${globals.iptablesCustom};
         sed -i s/FIREWALL_ENABLED=0/FIREWALL_ENABLED=1/g /etc/jelastic/metainf.conf;
         /usr/bin/jem firewall fwstart;
-      user: root
-
+      user: root    
+      
+  cleanIptablesCustom:
+    cmd [${globals.group}]: sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
+    user: root
+    
   setupFirewallAndShowSuccess:
     script [${globals.group}]: |
       var resp = jelastic.env.control.GetEnvInfo("${env.name}", session);
@@ -105,7 +110,8 @@ actions:
       var publicIP;
       for (i = nodes.length; i--;) {
         if (nodes[i].nodeGroup == nodeGroup && nodes[i].ismaster) {
-          publicIP =  nodes[i].extIPs[0];
+          publicIP = nodes[i].extIPs[0];
+          break;
         }
       }
 
