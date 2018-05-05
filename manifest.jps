@@ -76,7 +76,7 @@ onUninstall:
 
 actions:
   installVPN:
-    - cmd [${globals.group}]: |-
+    - cmd [${globals.group}]: |
         yum update iptables -y
         rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm        
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
@@ -87,9 +87,8 @@ actions:
       user: root
 
   setupFirewall:
-    - cleanIptablesCustom
-    - cmd [${globals.group}]:
-        touch -a ${globals.iptablesCustom};
+    - cleanIptablesCustom+
+    - cmd [${globals.group}]:        
         curl '${baseUrl}/scripts/iptables-custom' |
         sed 's/{{PUBLIC_IP}}/${this.ip}/g;
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
@@ -100,7 +99,8 @@ actions:
       user: root    
       
   cleanIptablesCustom:
-    cmd [${globals.group}]: sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
+    cmd [${globals.group}]: >
+      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}
     user: root
     
   setupFirewallAndShowSuccess:
