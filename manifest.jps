@@ -117,13 +117,13 @@ actions:
         }
       }
       
-      var message = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");
+      success = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");
       
       return {
         result: 0,
         onAfterReturn: [
           { "setupFirewall" : { "ip" : publicIP } },
-          { "return" : { "type": "success", "message": message, "email": message } }
+          { "return" : { "type": "success", "message": success, "email": success } }
         ]
       };
     success: |
