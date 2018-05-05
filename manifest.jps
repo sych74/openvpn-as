@@ -117,21 +117,14 @@ actions:
         }
       }
       
-      var message = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");  
-     
+      var message = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");
+      
       return {
         result: 0,
-        onAfterReturn: [{
-          "setupFirewall" : {
-            "ip" : publicIP
-          }
-        }, {
-          "return" : {
-            "type": "success",
-            "message": message,
-            "email": message
-          }
-        }]
+        onAfterReturn: [
+          { "setupFirewall" : { "ip" : publicIP } },
+          { "return" : { "type": "success", "message": message, "email": message } }
+        ]
       };
     success: |
       #### Admin UI is available here: [{{URI}}/admin]({{URI}}/admin)
