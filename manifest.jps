@@ -69,9 +69,10 @@ onUninstall:
   - cleanIptablesCustom
   - cmd [${globals.group}]: |-
       rpm -e openvpn-as
-      rm -rf ${globals.workDir}
+      rm -rf ${globals.workDir}      
       /usr/bin/jem firewall fwstart
-    user: root  
+      for i in $(iptables -S | grep AS0_ | awk '{print $2}' | uniq); do iptables -F $i && iptables -Z $i && iptables -X $i; done
+    user: root
 
 actions:
   installVPN:
