@@ -87,8 +87,8 @@ actions:
       user: root
 
   setupFirewall:
-    - cleanIptablesCustom+
-    - cmd [${globals.group}]:        
+    - cleanIptablesCustom
+    - cmd [${globals.group}]:
         curl '${baseUrl}/scripts/iptables-custom' |
         sed 's/{{PUBLIC_IP}}/${this.ip}/g;
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
