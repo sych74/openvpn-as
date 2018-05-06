@@ -20,64 +20,36 @@ description:
     </div>
 
 targetNodes:
-  nodeType:
-    - tomcat6
-    - tomcat7
-    - tomcat8
-    - tomcat85
-    - tomcat9
-    - tomcat
-    - tomee
-    - tomee-dockerized
-    - glassfish3
-    - glassfish4
-    - glassfish
-    - jetty6
-    - jetty8
-    - jetty9
-    - apache
-    - apache2
-    - nginxphp
-    - apache2-ruby
-    - nginx-ruby
-    - nginx
-    - nginx-dockerized
-    - nginxphp-dockerized
-    - haproxy
-    - apache-lb
-    - varnish
-    - varnish-dockerized
-    - payara
-    - golang
-    - wildfly
-    - springboot
-    - storage
-    - cassandra2
-    - cassandra3
-    - couchbase
-    - couchdb
-    - mariadb
-    - mariadb10
-    - mariadb-dockerized
-    - maven
-    - maven3
-    - memcached
-    - memcached-dockerized
-    - mongodb
-    - mongodb2
-    - mysql
-    - mysql5
-    - mysql5-6
-    - postgresql
-    - postgres
-    - postgres9
-    - redis
-    - redis3
-    - redis4
-    - nodejs
-    - centos6
-    - centos7
-
+  nodeType: [
+    'tomcat6', 'tomcat7', 'tomcat8', 'tomcat85', 'tomcat9', 'tomcat', 
+    'tomee', 'tomee-dockerized',
+    'glassfish3', 'glassfish4', 'glassfish',
+    'jetty6', 'jetty8', 'jetty9',
+    'apache', 'apache2',
+    'nginxphp', 'nginxphp-dockerized',
+    'apache2-ruby', 'nginx-ruby',
+    'nginx', 'nginx-dockerized', 
+    'haproxy',
+    'apache-lb',
+    'varnish', 'varnish-dockerized',
+    'payara',
+    'golang',
+    'nodejs',
+    'wildfly',
+    'springboot',
+    'storage',
+    'cassandra2', 'cassandra3',
+    'couchbase',
+    'couchdb',
+    'mongodb', 'mongodb2',
+    'redis', 'redis3', 'redis4',
+    'mariadb', 'mariadb10', 'mariadb-dockerized',
+    'mysql', 'mysql5', 'mysql5-6',
+    'postgresql', 'postgres', 'postgres9',
+    'maven', 'maven3',
+    'memcached', 'memcached-dockerized',
+    'centos6', 'centos7' ]
+    
 globals:
   group: ${targetNodes.nodeGroup}
   username: openvpn
