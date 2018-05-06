@@ -1,0 +1,40 @@
+type: install
+version: 1.4
+
+id: openvpn-centos7
+name: OpenVPN Access Server
+baseUrl: https://raw.githubusercontent.com/SlavaKatiukha/openvpn-as/master
+logo: images/logo.png
+
+homepage: https://www.openvpn.net/
+description:
+  short: Full featured secure network tunneling VPN
+  text: |
+    OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
+    capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
+    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
+    including secure and granular remote access to internal network and/or private cloud network resources and applications with
+    fine-grained access control.
+
+nodes:
+  nodeType: centos7
+  cloudlets: 8
+  extip: true
+  
+onInstall:
+  script: |
+    var resp = jelastic.marketplace.jps.Install({
+      envName: '${env.envName}', 
+      session: session,
+      jps: '${baseUrl}/manifest.jps',
+      nodeGroup: '${env.nodes.nodeGroup}'
+    });
+    
+    if (resp.result != 0) return resp;
+    
+    return {
+      result: 0,
+      onAfterReturn: {
+        'return' : { type : 'success', message: resp.successText }
+      }      
+    };
