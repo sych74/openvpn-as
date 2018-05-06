@@ -5,7 +5,8 @@ id: openvpn-centos7
 name: OpenVPN Access Server
 baseUrl: https://raw.githubusercontent.com/SlavaKatiukha/openvpn-as/master
 logo: images/logo.png
-
+categories:
+  - apps/dev-tools
 homepage: https://www.openvpn.net/
 description:
   short: Full featured secure network tunneling VPN
