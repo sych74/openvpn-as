@@ -51,7 +51,7 @@ targetNodes:
     'centos6', 'centos7' ]
     
 globals:
-  group: ${targetNodes.nodeGroup}
+  nodeId: ${targetNodes.master.id}
   username: openvpn
   password: ${fn.password(10)}
   workDir: /usr/local/openvpn_as
@@ -62,22 +62,24 @@ globals:
   webUiPort: 943
 
 onInstall:
-  - setExtIpEnabled [${globals.group}]: true
+  - setExtIpEnabled [${globals.nodeId}]: true
   - installVPN
   - setupFirewallAndShowSuccess
 
 onUninstall:
   - cleanIptablesCustom
-  - cmd [${globals.group}]: |-
+  - cmd [${globals.nodeId}]: |-
       rpm -e openvpn-as
       rm -rf ${globals.workDir}      
       /usr/bin/jem firewall fwstart
+      sed -i '/.*# create TUN device/d' /etc/rc.d/rc.local
       for i in $(iptables -S | grep AS0_ | awk '{print $2}' | uniq); do iptables -F $i && iptables -Z $i && iptables -X $i; done
     user: root
 
 actions:
   installVPN:
-    - cmd [${globals.group}]: |-
+    - checkTunInterface
+    - cmd [${globals.nodeId}]: |-
         yum update iptables -y
         rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm        
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
@@ -87,9 +89,17 @@ actions:
         ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
       user: root
 
+  checkTunInterface:
+    cmd [${globals.nodeId}]: |-
+      modprobe tun;
+      createTunDev='[ ! -f /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
+      eval $createTunDev && echo "$createTunDev # create TUN device" >> /etc/rc.d/rc.local;
+      exit 0;
+    user: root
+
   setupFirewall:
     - cleanIptablesCustom
-    - cmd [${globals.group}]:
+    - cmd [${globals.nodeId}]:
         curl '${baseUrl}/scripts/iptables-custom' |
         sed 's/{{PUBLIC_IP}}/${this.ip}/g;
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
@@ -100,19 +110,19 @@ actions:
       user: root    
       
   cleanIptablesCustom:
-    cmd [${globals.group}]: |-
+    cmd [${globals.nodeId}]: |-
       [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0      
     user: root
     
   setupFirewallAndShowSuccess:
-    script [${globals.group}]: |
+    script [${globals.nodeId}]: |
       var resp = jelastic.env.control.GetEnvInfo("${env.envName}", session);
       if (resp.result !== 0) return resp;
       var nodes = resp.nodes;
 
       var publicIP;
       for (i = nodes.length; i--;) {
-        if (nodes[i].nodeGroup == nodeGroup && nodes[i].ismaster) {
+        if (nodes[i].id == nodeId) {
           publicIP = nodes[i].extIPs[0];
           break;
         }
