@@ -78,7 +78,7 @@ onUninstall:
 
 actions:
   installVPN:
-    - checkTunInterface
+    - checkTunDevice
     - cmd [${globals.nodeId}]: |-
         yum update iptables -y
         rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm        
@@ -87,9 +87,10 @@ actions:
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
         echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && ${globals.ovpn}/confdba -mk - 'vpn.server.daemon.tcp.n_daemons' -v '1'
         ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
+        ${globals.ovpn}/sacli start
       user: root
 
-  checkTunInterface:
+  checkTunDevice:
     cmd [${globals.nodeId}]: |-
       modprobe tun;
       createTunDev='[ ! -f /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
