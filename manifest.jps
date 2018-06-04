@@ -60,13 +60,45 @@ globals:
   ovpnPortUDP: 1194
   ovpnPortTCP: 443
   webUiPort: 943
+  letsEncryptBaseUrl: https://raw.githubusercontent.com/SlavaKatiukha/lets-encrypt/le-custom
+  letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
+  letsEncryptDeployHook: ${globals.letsEncryptBaseDir}root/onDeploy.sh
+  letsEncryptUndeployHook: ${globals.letsEncryptBaseDir}root/onUndeploy.sh
+  letsEncryptScriptSufix: ovpn-letsencrypt-ssl
+
+settings:
+  fields:
+    - type: radio-fieldset
+      name: sslCertType
+      default: self-signed
+      values:
+        self-signed: Use self-signed SSL certificate
+        lets-encrypt: Use Let's Encrypt Free SSL with auto-renewal
+      showIf:
+        lets-encrypt:
+          - type: string
+            name: customDomains
+            regex: "^\\s*(([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\\.[a-zA-Z0-9-]{2,6})+)+\\s*[,|;]?\\s*)*([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9-]?(\\.[a-zA-Z0-9-]{2,6})+)$"
+            caption: External Domain(s)
+            placeholder: Leave blank to get a dummy SSL for internal domain
+            required: false
+
+buttons:
+  caption: Configure SSL
+  settings: main
+  action: configureSsl
 
 onInstall:
   - setExtIpEnabled [${globals.nodeId}]: true
   - installVPN
+  - if ("${settings.sslCertType}" == "lets-encrypt"):
+      installLetsEncrypt:
+        customDomains: ${settings.customDomains}
   - setupFirewallAndShowSuccess
 
 onUninstall:
+  - callSslScript:
+      action: uninstall
   - cleanIptablesCustom
   - cmd [${globals.nodeId}]: |-
       rpm -e openvpn-as
@@ -114,7 +146,56 @@ actions:
     cmd [${globals.nodeId}]: |-
       [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0      
     user: root
-    
+
+  installLetsEncrypt:
+    - cmd [${globals.nodeId}]:
+        mkdir -p $(dirname ${globals.letsEncryptDeployHook});
+        printf '#!/bin/bash\n
+               ${globals.ovpn}/sacli --key "cs.priv_key"  --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/privkey.pem" ConfigPut\n
+               ${globals.ovpn}/sacli --key "cs.cert"      --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/cert.pem" ConfigPut\n
+               ${globals.ovpn}/sacli --key "cs.ca_bundle" --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/fullchain.pem" ConfigPut\n
+               ${globals.ovpn}/sacli start' > ${globals.letsEncryptDeployHook};
+        mkdir -p $(dirname ${globals.letsEncryptUndeployHook});
+        printf '#!/bin/bash\n
+               ${globals.ovpn}/sacli --key "cs.priv_key" ConfigDel\n
+               ${globals.ovpn}/sacli --key "cs.ca_bundle" ConfigDel\n
+               ${globals.ovpn}/sacli --key "cs.cert" ConfigDel\n
+               ${globals.ovpn}/sacli start' > ${globals.letsEncryptUndeployHook};
+      user: root
+    - script: |
+        var customDomains = "${this.customDomains}",
+            domain = customDomains || "${targetNodes.master.url}".replace(/^https?:\/\/(.*)\/?$/, "$1");
+
+        return {
+          result: 0,
+          onAfterReturn: {
+            script: "${globals.letsEncryptBaseUrl}/scripts/create-installation-script.js?_r=${fn.random}",
+            cronTime: "0 ${fn.random(1,6)} * * *",
+            baseUrl: "${globals.letsEncryptBaseUrl}",
+            baseDir: "${globals.letsEncryptBaseDir}",
+            customDomains: domain,
+            scriptName: "${env.envName}-${globals.letsEncryptScriptSufix}",
+            nodeId: "${globals.nodeId}",
+            deployHook: "${globals.letsEncryptDeployHook}",
+            undeployHook: "${globals.letsEncryptDeployHook}",
+            test: !customDomains
+          }
+        };
+
+  callSslScript:
+    script: |
+      var resp = jelastic.dev.scripting.Eval(appid, session, '${env.envName}-${globals.letsEncryptScriptSufix}', {action:'${this.action}'});
+      if (resp.result == 0 && typeof resp.response === 'object' && resp.response.result != 0) resp = resp.response;
+      return resp;
+
+  configureSsl:
+    - if ("${this.sslCertType}" == "lets-encrypt"):
+        installLetsEncrypt:
+          customDomains: ${this.customDomains}
+    - if ("${this.sslCertType}" == "lets-encrypt"):
+        callSslScript:
+          action: uninstall
+
   setupFirewallAndShowSuccess:
     script [${globals.nodeId}]: |
       var resp = jelastic.env.control.GetEnvInfo("${env.envName}", session);
@@ -128,9 +209,9 @@ actions:
           break;
         }
       }
-      
-      success = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");
-      
+
+      success = success.replace(/{{URI}}/g, "${targetNodes.master.url}:${globals.webUiPort}".replace(/^https?/, "https"));
+
       return {
         result: 0,
         onAfterReturn: [
