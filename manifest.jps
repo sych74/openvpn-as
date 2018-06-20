@@ -87,7 +87,7 @@ actions:
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
         echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && ${globals.ovpn}/confdba -mk -'vpn.server.daemon.tcp.n_daemons' -v '1'
         ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
-        ${globals.ovpn}/sacli Start
+        ${globals.ovpn}/sacli --restart_mode=dry_run Start
       user: root
 
   checkTunDevice:
