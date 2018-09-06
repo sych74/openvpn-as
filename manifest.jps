@@ -53,7 +53,7 @@ globals:
   iptablesCustom: /etc/sysconfig/iptables-custom
   ovpn: ${globals.workDir}/scripts
   ovpnPortUDP: 1194
-  ovpnPortTCP: 443
+  ovpnPortTCP: 1443
   webUiPort: 943
   letsEncryptBaseUrl: https://raw.githubusercontent.com/SlavaKatiukha/lets-encrypt/le-custom
   letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
