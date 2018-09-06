@@ -6,7 +6,7 @@
 
 OpenVPN Access Server (OpenVPN-AS) is a set of tools that simplify the rapid deployment of a remote access VPN server. It is based on the popular OpenVPN open source software, allowing you to work with a configured VPN server using cross-platform client software. The built-in web administration panel provides an ability to set of all possible OpenVPN configurations. It’s complemented with free, automated, and open certificate authority (CA) the Let’s Encrypt with automatic renewal.
 
-##OpenVPN-AS Installation
+## OpenVPN-AS Installation
 
 Sign in your Jelastic account and import the manifest.jps pressing Import button. 
 
@@ -34,12 +34,12 @@ In case you have no OpenVPN client software installed, choose an appropriate one
 This solution comes with a free OpenVPN-AS license for two concurrent connections. Use admin panel to apply for extra connections license.
 
 
-###Deploy Now
+### Deploy Now
 Press Deploy to get an account and deploy to a certified Jelastic partner from the distributed network of independent data center service providers. 
 
 [![Deploy](https://github.com/jelastic-jps/git-push-deploy/raw/master/images/deploy-to-jelastic.png)](https://jelastic.com/install-application/?manifest=https://raw.githubusercontent.com/jelastic-jps/openvpn-as/openvpn-lets-encrypt/manifest.jps) 
 
-###OpenVPN-AS Managed Hosting Business
+### OpenVPN-AS Managed Hosting Business
 
 To start offering this solution to your customers please follow to [Managed PaaS Hosting Business](https://jelastic.com/apaas/)
 
