@@ -12,12 +12,8 @@ description:
   text: |
     OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
     capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
-    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
-    including secure and granular remote access to internal network and/or private cloud network resources and applications with
-    fine-grained access control.
-    <div class='warning-lower' style='color:#b7c3da'>
-    <b>Note</b> that the Public IP and Firewall will be activated for your environment automatically.
-    </div>
+    accommodate Windows, MAC, and Linux OS environments.      
+    The Public IP and Firewall will be activated for your environment automatically.
 
 targetNodes:
   nodeType: [
@@ -47,7 +43,6 @@ targetNodes:
     'mysql', 'mysql5', 'mysql5-6',
     'postgresql', 'postgres', 'postgres9',
     'maven', 'maven3',
-    'memcached', 'memcached-dockerized',
     'centos6', 'centos7' ]
     
 globals:
@@ -229,7 +224,8 @@ actions:
       Connection profiles can be downloaded using [Client UI]({{URI}}).
 
       #### To download the OpenVPN Connect app, please choose a platform below:
-      * [OpenVPN Connect for Windows]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
+      * [OpenVPN Connect for Windows 10]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
+      * [OpenVPN Connect for Windows 7,8](https://swupdate.openvpn.org/community/releases/openvpn-install-2.4.6-I602.exe)
       * [OpenVPN Connect for Mac OS X]({{URI}}/generic/openvpn-connect-2.5.0.112_signed.dmg)
       * [OpenVPN Connect for Android](http://openvpn.net/clients/index.php?client=openvpn_connect_android)
       * [OpenVPN Connect for iOS](http://openvpn.net/clients/index.php?client=openvpn_connect_ios)
