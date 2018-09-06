@@ -215,12 +215,11 @@ actions:
         ]
       };
     success: |
-      #### Admin UI is available here: [{{URI}}/admin]({{URI}}/admin)
+      Admin UI is available here: *[{{URI}}/admin]({{URI}}/admin)*
+      Connection profiles can be downloaded using *[Client UI]({{URI}})*
       Enter the access credentials below to connect:
       * Username: **${globals.username}**
       * Password: **${globals.password}**
-
-      Connection profiles can be downloaded using [Client UI]({{URI}}).
 
       To download the OpenVPN Connect app, please choose a platform below:
       * [OpenVPN Connect for Windows 10]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
