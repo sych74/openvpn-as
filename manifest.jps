@@ -216,8 +216,9 @@ actions:
       };
     success: |
       Admin UI is available here: *[{{URI}}/admin]({{URI}}/admin)*
+      
       Connection profiles can be downloaded using *[Client UI]({{URI}})*
-      Enter the access credentials below to connect:
+     
       * Username: **${globals.username}**
       * Password: **${globals.password}**
 
