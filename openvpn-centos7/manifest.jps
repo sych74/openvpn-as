@@ -3,7 +3,7 @@ version: 1.4
 
 id: openvpn-centos7
 name: OpenVPN Access Server
-baseUrl: https://raw.githubusercontent.com/SlavaKatiukha/openvpn-as/master
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/openvpn-as/openvpn-lets-encrypt
 logo: images/logo.png
 categories:
   - apps/dev-and-admin-tools
@@ -17,18 +17,39 @@ description:
     including secure and granular remote access to internal network and/or private cloud network resources and applications with
     fine-grained access control.
 
+settings:
+  fields:
+    - type: radio-fieldset
+      name: sslCertType
+      default: self-signed
+      values:
+        self-signed: Use self-signed SSL certificate
+        lets-encrypt: Use Let's Encrypt Free SSL with auto-renewal
+      showIf:
+        lets-encrypt:
+          - type: string
+            name: customDomains
+            regex: "^\\s*(([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\\.[a-zA-Z0-9-]{2,6})+)+\\s*[,|;]?\\s*)*([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9-]?(\\.[a-zA-Z0-9-]{2,6})+)$"
+            caption: External Domain(s)
+            placeholder: Leave blank to get a dummy SSL for internal domain
+            required: false
+
 nodes:
   nodeType: centos7
   cloudlets: 8
   extip: true
-  
+
 onInstall:
   script: |
     var resp = jelastic.marketplace.jps.Install({
       envName: '${env.envName}', 
       session: session,
       jps: '${baseUrl}/manifest.jps',
-      nodeGroup: '${env.nodes.nodeGroup}'
+      nodeGroup: '${env.nodes.nodeGroup}',
+      settings: {
+        sslCertType : '${settings.sslCertType}',
+        customDomains : '${settings.customDomains}'
+      }
     });
     
     if (resp.result != 0) return resp;

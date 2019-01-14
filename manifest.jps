@@ -12,12 +12,8 @@ description:
   text: |
     OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
     capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
-    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
-    including secure and granular remote access to internal network and/or private cloud network resources and applications with
-    fine-grained access control.
-    <div class='warning-lower' style='color:#b7c3da'>
-    <b>Note</b> that the Public IP and Firewall will be activated for your environment automatically.
-    </div>
+    accommodate Windows, MAC, and Linux OS environments.      
+    The Public IP and Firewall will be activated for your environment automatically.
 
 targetNodes:
   nodeType: [
@@ -47,7 +43,6 @@ targetNodes:
     'mysql', 'mysql5', 'mysql5-6',
     'postgresql', 'postgres', 'postgres9',
     'maven', 'maven3',
-    'memcached', 'memcached-dockerized',
     'centos6', 'centos7' ]
     
 globals:
@@ -58,15 +53,47 @@ globals:
   iptablesCustom: /etc/sysconfig/iptables-custom
   ovpn: ${globals.workDir}/scripts
   ovpnPortUDP: 1194
-  ovpnPortTCP: 443
+  ovpnPortTCP: 1443
   webUiPort: 943
+  letsEncryptBaseUrl: https://raw.githubusercontent.com/SlavaKatiukha/lets-encrypt/le-custom
+  letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
+  letsEncryptDeployHook: ${globals.letsEncryptBaseDir}root/onDeploy.sh
+  letsEncryptUndeployHook: ${globals.letsEncryptBaseDir}root/onUndeploy.sh
+  letsEncryptScriptSufix: ovpn-letsencrypt-ssl
+
+settings:
+  fields:
+    - type: radio-fieldset
+      name: sslCertType
+      default: self-signed
+      values:
+        self-signed: Use self-signed SSL certificate
+        lets-encrypt: Use Let's Encrypt Free SSL with auto-renewal
+      showIf:
+        lets-encrypt:
+          - type: string
+            name: customDomains
+            regex: "^\\s*(([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\\.[a-zA-Z0-9-]{2,6})+)+\\s*[,|;]?\\s*)*([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9-]?(\\.[a-zA-Z0-9-]{2,6})+)$"
+            caption: External Domain(s)
+            placeholder: Leave blank to get a dummy SSL for internal domain
+            required: false
+
+buttons:
+  caption: Configure SSL
+  settings: main
+  action: configureSsl
 
 onInstall:
   - setExtIpEnabled [${globals.nodeId}]: true
   - installVPN
+  - if ("${settings.sslCertType}" == "lets-encrypt"):
+      installLetsEncrypt:
+        customDomains: ${settings.customDomains}
   - setupFirewallAndShowSuccess
 
 onUninstall:
+  - callSslScript:
+      action: uninstall
   - cleanIptablesCustom
   - cmd [${globals.nodeId}]: |-
       rpm -e openvpn-as
@@ -114,7 +141,56 @@ actions:
     cmd [${globals.nodeId}]: |-
       [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0      
     user: root
-    
+
+  installLetsEncrypt:
+    - cmd [${globals.nodeId}]:
+        mkdir -p $(dirname ${globals.letsEncryptDeployHook});
+        printf '#!/bin/bash\n
+               ${globals.ovpn}/sacli --key "cs.priv_key"  --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/privkey.pem" ConfigPut\n
+               ${globals.ovpn}/sacli --key "cs.cert"      --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/cert.pem" ConfigPut\n
+               ${globals.ovpn}/sacli --key "cs.ca_bundle" --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/fullchain.pem" ConfigPut\n
+               ${globals.ovpn}/sacli start' > ${globals.letsEncryptDeployHook};
+        mkdir -p $(dirname ${globals.letsEncryptUndeployHook});
+        printf '#!/bin/bash\n
+               ${globals.ovpn}/sacli --key "cs.priv_key" ConfigDel\n
+               ${globals.ovpn}/sacli --key "cs.ca_bundle" ConfigDel\n
+               ${globals.ovpn}/sacli --key "cs.cert" ConfigDel\n
+               ${globals.ovpn}/sacli start' > ${globals.letsEncryptUndeployHook};
+      user: root
+    - script: |
+        var customDomains = "${this.customDomains}",
+            domain = customDomains || "${targetNodes.master.url}".replace(/^https?:\/\/(.*)\/?$/, "$1");
+
+        return {
+          result: 0,
+          onAfterReturn: {
+            script: "${globals.letsEncryptBaseUrl}/scripts/create-installation-script.js?_r=${fn.random}",
+            cronTime: "0 ${fn.random(1,6)} * * *",
+            baseUrl: "${globals.letsEncryptBaseUrl}",
+            baseDir: "${globals.letsEncryptBaseDir}",
+            customDomains: domain,
+            scriptName: "${env.envName}-${globals.letsEncryptScriptSufix}",
+            nodeId: "${globals.nodeId}",
+            deployHook: "${globals.letsEncryptDeployHook}",
+            undeployHook: "${globals.letsEncryptDeployHook}",
+            test: !customDomains
+          }
+        };
+
+  callSslScript:
+    script: |
+      var resp = jelastic.dev.scripting.Eval(appid, session, '${env.envName}-${globals.letsEncryptScriptSufix}', {action:'${this.action}'});
+      if (resp.result == 0 && typeof resp.response === 'object' && resp.response.result != 0) resp = resp.response;
+      return resp;
+
+  configureSsl:
+    - if ("${this.sslCertType}" == "lets-encrypt"):
+        installLetsEncrypt:
+          customDomains: ${this.customDomains}
+    - if ("${this.sslCertType}" == "self-signed"):
+        callSslScript:
+          action: uninstall
+
   setupFirewallAndShowSuccess:
     script [${globals.nodeId}]: |
       var resp = jelastic.env.control.GetEnvInfo("${env.envName}", session);
@@ -128,9 +204,9 @@ actions:
           break;
         }
       }
-      
-      success = success.replace(/{{URI}}/g, "https://" + publicIP + ":${globals.webUiPort}");
-      
+
+      success = success.replace(/{{URI}}/g, "${targetNodes.master.url}:${globals.webUiPort}".replace(/^https?/, "https"));
+
       return {
         result: 0,
         onAfterReturn: [
@@ -139,16 +215,16 @@ actions:
         ]
       };
     success: |
-      #### Admin UI is available here: [{{URI}}/admin]({{URI}}/admin)
-
-      Enter the access credentials below to connect:
+      Admin UI is available here: **[{{URI}}/admin]({{URI}}/admin)**.
+      
+      Connection profiles can be downloaded here: **[Client UI]({{URI}})**.
+     
       * Username: **${globals.username}**
       * Password: **${globals.password}**
 
-      Connection profiles can be downloaded using [Client UI]({{URI}}).
-
-      #### To download the OpenVPN Connect app, please choose a platform below:
-      * [OpenVPN Connect for Windows]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
+      OpenVPN client applications:
+      * [OpenVPN Connect for Windows 10]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
+      * [OpenVPN Connect for Windows 7,8](https://swupdate.openvpn.org/community/releases/openvpn-install-2.4.6-I602.exe)
       * [OpenVPN Connect for Mac OS X]({{URI}}/generic/openvpn-connect-2.5.0.112_signed.dmg)
       * [OpenVPN Connect for Android](http://openvpn.net/clients/index.php?client=openvpn_connect_android)
       * [OpenVPN Connect for iOS](http://openvpn.net/clients/index.php?client=openvpn_connect_ios)
