@@ -133,12 +133,13 @@ actions:
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
              s/{{OVPN_TCP_PORT}}/${globals.ovpnPortTCP}/g;
              s/{{OVPN_WEB_PORT}}/${globals.webUiPort}/g;' >> ${globals.iptablesCustom};
-        if grep -q "FIREWALL_ENABLED" /etc/jelastic/metainf.conf ; then
-            sed -i -re "s/FIREWALL_ENABLED=([0-9]+)/FIREWALL_ENABLED=1/g" /etc/jelastic/metainf.conf
+        if grep -q 'FIREWALL_ENABLED' /etc/jelastic/metainf.conf ; then
+            sed -i -re 's/FIREWALL_ENABLED=([0-9]+)/FIREWALL_ENABLED=1/g' /etc/jelastic/metainf.conf ;
         else
-            echo -e "\nFIREWALL_ENABLED=1" >> /etc/jelastic/metainf.conf
-            sed -i -re '/^$/d' /etc/jelastic/metainf.conf
-        fi
+            echo -e '' >> /etc/jelastic/metainf.conf ;
+            echo -e 'FIREWALL_ENABLED=1' >> /etc/jelastic/metainf.conf ;
+            sed -i -re '/^$/d' /etc/jelastic/metainf.conf ;
+        fi ;
         /usr/bin/jem firewall fwstart;
       user: root
 
