@@ -12,19 +12,19 @@ description:
   text: |
     OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
     capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
-    accommodate Windows, MAC, and Linux OS environments.      
+    accommodate Windows, MAC, and Linux OS environments.
     The Public IP and Firewall will be activated for your environment automatically.
 
 targetNodes:
   nodeType: [
-    'tomcat6', 'tomcat7', 'tomcat8', 'tomcat85', 'tomcat9', 'tomcat', 
+    'tomcat6', 'tomcat7', 'tomcat8', 'tomcat85', 'tomcat9', 'tomcat',
     'tomee', 'tomee-dockerized',
     'glassfish3', 'glassfish4', 'glassfish',
     'jetty6', 'jetty8', 'jetty9',
     'apache', 'apache2',
     'nginxphp', 'nginxphp-dockerized',
     'apache2-ruby', 'nginx-ruby',
-    'nginx', 'nginx-dockerized', 
+    'nginx', 'nginx-dockerized',
     'haproxy',
     'apache-lb',
     'varnish', 'varnish-dockerized',
@@ -44,7 +44,7 @@ targetNodes:
     'postgresql', 'postgres', 'postgres9',
     'maven', 'maven3',
     'centos6', 'centos7' ]
-    
+
 globals:
   nodeId: ${targetNodes.master.id}
   username: openvpn
@@ -97,7 +97,7 @@ onUninstall:
   - cleanIptablesCustom
   - cmd [${globals.nodeId}]: |-
       rpm -e openvpn-as
-      rm -rf ${globals.workDir}      
+      rm -rf ${globals.workDir}
       /usr/bin/jem firewall fwstart
       sed -i '/.*# create TUN device/d' /etc/rc.d/rc.local
       for i in $(iptables -S | grep AS0_ | awk '{print $2}' | uniq); do iptables -F $i && iptables -Z $i && iptables -X $i; done
@@ -108,7 +108,7 @@ actions:
     - checkTunDevice
     - cmd [${globals.nodeId}]: |-
         yum update iptables -y
-        rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm        
+        rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
@@ -133,13 +133,19 @@ actions:
              s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
              s/{{OVPN_TCP_PORT}}/${globals.ovpnPortTCP}/g;
              s/{{OVPN_WEB_PORT}}/${globals.webUiPort}/g;' >> ${globals.iptablesCustom};
-        sed -i s/FIREWALL_ENABLED=0/FIREWALL_ENABLED=1/g /etc/jelastic/metainf.conf;
+        if grep -q 'FIREWALL_ENABLED' /etc/jelastic/metainf.conf ; then
+            sed -i -re 's/FIREWALL_ENABLED=([0-9]+)/FIREWALL_ENABLED=1/g' /etc/jelastic/metainf.conf ;
+        else
+            echo -e '' >> /etc/jelastic/metainf.conf ;
+            echo -e 'FIREWALL_ENABLED=1' >> /etc/jelastic/metainf.conf ;
+            sed -i -re '/^$/d' /etc/jelastic/metainf.conf ;
+        fi ;
         /usr/bin/jem firewall fwstart;
-      user: root    
-      
+      user: root
+
   cleanIptablesCustom:
     cmd [${globals.nodeId}]: |-
-      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0      
+      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0
     user: root
 
   installLetsEncrypt:
@@ -216,9 +222,9 @@ actions:
       };
     success: |
       Admin UI is available here: **[{{URI}}/admin]({{URI}}/admin)**.
-      
+
       Connection profiles can be downloaded here: **[Client UI]({{URI}})**.
-     
+
       * Username: **${globals.username}**
       * Password: **${globals.password}**
 
