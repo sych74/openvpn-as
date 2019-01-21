@@ -3,7 +3,7 @@ version: 1.4
 
 id: openvpn-as
 name: OpenVPN Access Server
-baseUrl: https://raw.githubusercontent.com/SlavaKatiukha/openvpn-as/master
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/openvpn-as/master
 logo: images/logo.png
 
 homepage: https://www.openvpn.net/
