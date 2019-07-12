@@ -55,7 +55,7 @@ globals:
   ovpnPortUDP: 1194
   ovpnPortTCP: 1443
   webUiPort: 943
-  letsEncryptBaseUrl: https://raw.githubusercontent.com/SlavaKatiukha/lets-encrypt/le-custom
+  letsEncryptBaseUrl: https://raw.githubusercontent.com/jelastic-jps/lets-encrypt/master
   letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
   letsEncryptDeployHook: ${globals.letsEncryptBaseDir}root/onDeploy.sh
   letsEncryptUndeployHook: ${globals.letsEncryptBaseDir}root/onUndeploy.sh
