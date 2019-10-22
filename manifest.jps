@@ -120,7 +120,7 @@ actions:
   checkTunDevice:
     cmd [${globals.nodeId}]: |-
       modprobe tun;
-      createTunDev='[ ! -f /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
+      createTunDev='[ ! -e /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
       eval $createTunDev && echo "$createTunDev # create TUN device" >> /etc/rc.d/rc.local;
       exit 0;
     user: root
