@@ -19,7 +19,6 @@ targetNodes:
   nodeType: [
     'tomcat6', 'tomcat7', 'tomcat8', 'tomcat85', 'tomcat9', 'tomcat',
     'tomee', 'tomee-dockerized',
-    'glassfish3', 'glassfish4', 'glassfish',
     'jetty6', 'jetty8', 'jetty9',
     'apache', 'apache2',
     'nginxphp', 'nginxphp-dockerized',
