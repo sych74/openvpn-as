@@ -107,13 +107,18 @@ actions:
     - checkTunDevice
     - cmd [${globals.nodeId}]: |-
         yum update iptables -y
-        rpm -q --queryformat '%{VERSION}' centos-release | rpm -i http://swupdate.openvpn.org/as/openvpn-as-2.5-CentOS$(cat).x86_64.rpm
+        rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
+        yum -y install openvpn-as
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
-        echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && ${globals.ovpn}/confdba -mk -'vpn.server.daemon.tcp.n_daemons' -v '1'
+        echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && {
+          ${globals.ovpn}/confdba -mk -'vpn.server.daemon.tcp.n_daemons' -v '1';
+          ${globals.ovpn}/confdba -mk -'vpn.server.daemon.udp.n_daemons' -v '1'; }
+        ${globals.ovpn}/sacli --key "vpn.server.daemon.tcp.n_daemons" --value "1" ConfigPut
+        ${globals.ovpn}/sacli --key "vpn.server.daemon.udp.n_daemons" --value "1" ConfigPut
         ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
-        ${globals.ovpn}/sacli --restart_mode=dry_run Start
+        ${globals.ovpn}/sacli --restart_mode=cold Start
       user: root
 
   checkTunDevice:
@@ -228,9 +233,8 @@ actions:
       * Password: **${globals.password}**
 
       OpenVPN client applications:
-      * [OpenVPN Connect for Windows 10]({{URI}}/generic/openvpn-connect-2.5.0.100.msi)
-      * [OpenVPN Connect for Windows 7,8](https://swupdate.openvpn.org/community/releases/openvpn-install-2.4.6-I602.exe)
-      * [OpenVPN Connect for Mac OS X]({{URI}}/generic/openvpn-connect-2.5.0.112_signed.dmg)
-      * [OpenVPN Connect for Android](http://openvpn.net/clients/index.php?client=openvpn_connect_android)
-      * [OpenVPN Connect for iOS](http://openvpn.net/clients/index.php?client=openvpn_connect_ios)
-      * [OpenVPN for Linux](http://openvpn.net/clients/index.php?client=openvpn_linux)
+      * [OpenVPN Connect for Windows 7,8,10](https://openvpn.net/downloads/openvpn-connect-v2-windows.msi)
+      * [OpenVPN Connect for Mac OS X](https://openvpn.net/downloads/openvpn-connect-v2-macos.dmg)
+      * [OpenVPN Connect for Android](https://openvpn.net/clients/index.php?client=openvpn_connect_android)
+      * [OpenVPN Connect for iOS](https://openvpn.net/clients/index.php?client=openvpn_connect_ios)
+      * [OpenVPN for Linux](https://openvpn.net/clients/index.php?client=openvpn_linux)
