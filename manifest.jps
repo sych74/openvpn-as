@@ -62,6 +62,10 @@ globals:
 
 settings:
   fields:
+    - type: checkbox
+      name: anonymize
+      caption: allow access to the platform internal network
+      value: false
     - type: radio-fieldset
       name: sslCertType
       default: self-signed
@@ -112,6 +116,8 @@ actions:
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
         ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
+        if [ "${settings.anonymize}" == "true" ]; then anonymize_prop=false; else anonymize_prop=true; fi;
+        ${globals.ovpn}/confdba --mod --key=vpn.client.routing.reroute_dns --value=${anonymize_prop} --prof=Default
         echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && {
           ${globals.ovpn}/confdba -mk -'vpn.server.daemon.tcp.n_daemons' -v '1';
           ${globals.ovpn}/confdba -mk -'vpn.server.daemon.udp.n_daemons' -v '1'; }
