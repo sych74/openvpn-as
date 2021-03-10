@@ -1,4 +1,4 @@
-
+<% privateNetworks = privateNetworks ? privateNetworks.split(/\s*,\s*/) : [] %>
 # BOF OpenVPN
 *mangle
 :AS0_MANGLE_PRE_REL_EST - [0:0]
@@ -24,10 +24,9 @@ COMMIT
 -A AS0_NAT -j ACCEPT
 -A AS0_NAT_POST_REL_EST -j ACCEPT
 -A AS0_NAT_PRE -m mark --mark 0x8000000/0x8000000 -j AS0_NAT
--A AS0_NAT_PRE -d 169.254.0.0/16 -j AS0_NAT_TEST
--A AS0_NAT_PRE -d 192.168.0.0/16 -j AS0_NAT_TEST
--A AS0_NAT_PRE -d 172.16.0.0/12 -j AS0_NAT_TEST
--A AS0_NAT_PRE -d 10.0.0.0/8 -j AS0_NAT_TEST
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+-A AS0_NAT_PRE -d <%= privateNetworks[i] %> -j AS0_NAT_TEST
+<%}%>
 -A AS0_NAT_PRE -j AS0_NAT
 -A AS0_NAT_PRE_REL_EST -j ACCEPT
 -A AS0_NAT_TEST -o as0t+ -j ACCEPT
@@ -48,13 +47,15 @@ COMMIT
 :AS0_OUT_POST - [0:0]
 :AS0_OUT_S2C - [0:0]
 :AS0_WEBACCEPT - [0:0]
+-A INPUT -p udp -m udp --dport 53 -j AS0_ACCEPT
+-A INPUT -p tcp -m tcp --dport 53 -j AS0_ACCEPT
 -A INPUT -m state --state RELATED,ESTABLISHED -j AS0_ACCEPT
 -A INPUT -i lo -j AS0_ACCEPT
 -A INPUT -m mark --mark 0x2000000/0x2000000 -j AS0_IN_PRE
--A INPUT -d {{PUBLIC_IP}}/32 -p udp -m state --state NEW -m udp --dport {{OVPN_UDP_PORT}} -j AS0_ACCEPT
--A INPUT -d {{PUBLIC_IP}}/32 -p tcp -m state --state NEW -m tcp --dport {{OVPN_TCP_PORT}} -j AS0_ACCEPT
+-A INPUT -d <%= publicIP %>/32 -p udp -m state --state NEW -m udp --dport <%= ovpnPortUDP %> -j AS0_ACCEPT
+-A INPUT -d <%= publicIP %>/32 -p tcp -m state --state NEW -m tcp --dport <%= ovpnPortTCP %> -j AS0_ACCEPT
 -A INPUT -m state --state RELATED,ESTABLISHED -j AS0_WEBACCEPT
--A INPUT -d {{PUBLIC_IP}}/32 -p tcp -m state --state NEW -m tcp --dport {{OVPN_WEB_PORT}} -j AS0_WEBACCEPT
+-A INPUT -d <%= publicIP %>/32 -p tcp -m state --state NEW -m tcp --dport <%= webUiPort %> -j AS0_WEBACCEPT
 -A FORWARD -m state --state RELATED,ESTABLISHED -j AS0_ACCEPT
 -A FORWARD -m mark --mark 0x2000000/0x2000000 -j AS0_IN_PRE
 -A FORWARD -o as0t+ -j AS0_OUT_S2C
@@ -64,19 +65,17 @@ COMMIT
 -A AS0_IN -j AS0_IN_POST
 -A AS0_IN_NAT -j MARK --set-xmark 0x8000000/0x8000000
 -A AS0_IN_NAT -j ACCEPT
--A AS0_IN_POST -d 169.254.0.0/16 -j ACCEPT
--A AS0_IN_POST -d 192.168.0.0/16 -j ACCEPT
--A AS0_IN_POST -d 172.16.0.0/12 -j ACCEPT
--A AS0_IN_POST -d 10.0.0.0/8 -j ACCEPT
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+-A AS0_IN_POST -d <%= privateNetworks[i] %> -j ACCEPT
+<%}%>
 -A AS0_IN_POST -o as0t+ -j AS0_OUT
 -A AS0_IN_POST -j DROP
 -A AS0_IN_PRE -p tcp -m state --state NEW -m tcp --dport 53 -j ACCEPT
 -A AS0_IN_PRE -p udp -m state --state NEW -m udp --dport 53 -j ACCEPT
--A AS0_IN_PRE -d 169.254.0.0/16 -j AS0_IN
--A AS0_IN_PRE -d 192.168.0.0/16 -j AS0_IN
--A AS0_IN_PRE -d 172.16.0.0/12 -j AS0_IN
--A AS0_IN_PRE -d 10.0.0.0/8 -j AS0_IN
--A AS0_IN_PRE -j ACCEPT
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+-A AS0_IN_PRE -d <%= privateNetworks[i] %> -j AS0_IN
+<%}%>
+-A AS0_IN_PRE -j <%= privateNetworks.length ? "DROP" : "ACCEPT" %>
 -A AS0_IN_ROUTE -j MARK --set-xmark 0x4000000/0x4000000
 -A AS0_IN_ROUTE -j ACCEPT
 -A AS0_OUT -j AS0_OUT_POST
@@ -87,3 +86,4 @@ COMMIT
 -A AS0_WEBACCEPT -j ACCEPT
 COMMIT
 # EOF OpenVPN
+<% return { result: 0, body: ___ViewO.join('') }; %>

@@ -1,247 +1,321 @@
-type: update
-version: 1.4
+type: install
+version: 1.8.1
 
 id: openvpn-as
 name: OpenVPN Access Server
 baseUrl: https://raw.githubusercontent.com/jelastic-jps/openvpn-as/master
 logo: images/logo.png
-
-homepage: https://www.openvpn.net/
+categories:
+  - apps/dev-and-admin-tools
+homepage: https://openvpn.net/access-server/
 description:
   short: Full featured secure network tunneling VPN
   text: |
     OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
     capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
-    accommodate Windows, MAC, and Linux OS environments.
-    The Public IP and Firewall will be activated for your environment automatically.
+    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
+    including secure and granular remote access to internal network and/or private cloud network resources and applications with
+    fine-grained access control.
 
-targetNodes:
-  nodeType: [
-    'tomcat6', 'tomcat7', 'tomcat8', 'tomcat85', 'tomcat9', 'tomcat',
-    'tomee', 'tomee-dockerized',
-    'jetty6', 'jetty8', 'jetty9',
-    'apache', 'apache2',
-    'nginxphp', 'nginxphp-dockerized',
-    'apache2-ruby', 'nginx-ruby',
-    'nginx', 'nginx-dockerized',
-    'haproxy',
-    'apache-lb',
-    'varnish', 'varnish-dockerized',
-    'payara',
-    'golang',
-    'nodejs',
-    'wildfly',
-    'springboot',
-    'storage',
-    'cassandra2', 'cassandra3',
-    'couchbase',
-    'couchdb',
-    'mongodb', 'mongodb2',
-    'redis', 'redis3', 'redis4',
-    'mariadb', 'mariadb10', 'mariadb-dockerized',
-    'mysql', 'mysql5', 'mysql5-6',
-    'postgresql', 'postgres', 'postgres9',
-    'maven', 'maven3',
-    'centos6', 'centos7' ]
+settings:
+  fields:
+    - type: compositefield
+      hideLabel: true
+      items:
+        - type: displayfield
+          value: Access Mode
+
+    - type: radio-fieldset
+      name: mode
+      default: anonymizer
+      values:
+        - caption: Anonymizer
+          value: anonymizer
+          tooltip:
+            text: Route client Internet traffic through the VPN
+            maxWidth: 180
+            y: -1
+        - caption: Internal network access
+          value: internalNetworkAccess
+          tooltip:
+            y: -1
+            text: |
+              Client access to the environmetns private subnets.<br><br>
+              <b>Note</b>:<br>
+              <ul style="list-style: disc inside;"><li>private subnets access works only within the same isolated environment group or within the same region where OpenVPN Access Server is installed</li>
+              <li>clients will use OpenVPN node as a DNS server</li></ul>
+
+    - type: spacer
+      hideLabel: true
+      height: 0
+
+    - type: displayfield
+      value: Admin Web Server SSL Certificates
+      hideLabel: true
+
+    - type: radio-fieldset
+      name: sslCertType
+      default: self-signed
+      values:
+        self-signed: Self-signed SSL certificate
+        lets-encrypt: Let's Encrypt free SSL with auto-renewal
+      showIf:
+        lets-encrypt:
+          - type: string
+            name: customDomains
+            vtype: domainlist
+            caption: External Domain(s)
+            placeholder: leave blank to get a dummy SSL for internal domain
+            required: false
+            tooltip: |
+              Each of the specified external domains should be preliminarily bound via DNS record to the external IP of the node where add-on is installed.<br><br>
+              <b>Note:</b> Leave this field blank for issuing a test SSL certificate bound to the internal environment domain. External domains can be changed any time later.
+
+nodes:
+  nodeType: centos7
+  cloudlets: 8
+  extip: true
 
 globals:
-  nodeId: ${targetNodes.master.id}
+  nodeId: ${nodes.centos7.master.id}
   username: openvpn
-  password: ${fn.password(10)}
+  password: ${fn.password(14)}
   workDir: /usr/local/openvpn_as
   iptablesCustom: /etc/sysconfig/iptables-custom
   ovpn: ${globals.workDir}/scripts
   ovpnPortUDP: 1194
   ovpnPortTCP: 1443
-  webUiPort: 943
+  webUiPort: 443
   letsEncryptBaseUrl: https://raw.githubusercontent.com/jelastic-jps/lets-encrypt/master
   letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
   letsEncryptDeployHook: ${globals.letsEncryptBaseDir}root/onDeploy.sh
   letsEncryptUndeployHook: ${globals.letsEncryptBaseDir}root/onUndeploy.sh
   letsEncryptScriptSufix: ovpn-letsencrypt-ssl
+  privateNetworks: 169.254.0.0/16, 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8
 
-settings:
-  fields:
-    - type: checkbox
-      name: anonymize
-      caption: allow access to the platform internal network
-      value: false
-    - type: radio-fieldset
-      name: sslCertType
-      default: self-signed
-      values:
-        self-signed: Use self-signed SSL certificate
-        lets-encrypt: Use Let's Encrypt Free SSL with auto-renewal
-      showIf:
-        lets-encrypt:
-          - type: string
-            name: customDomains
-            regex: "^\\s*(([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\\.[a-zA-Z0-9-]{2,6})+)+\\s*[,|;]?\\s*)*([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9-]?(\\.[a-zA-Z0-9-]{2,6})+)$"
-            caption: External Domain(s)
-            placeholder: Leave blank to get a dummy SSL for internal domain
-            required: false
-
-buttons:
-  caption: Configure SSL
-  settings: main
-  action: configureSsl
+onBeforeInstall: |
+  var addon = jps.onInstall[2].install.jps;
+  addon.globals = jps.globals;
+  addon.settings = jps.settings;
+  addon.baseUrl = jps.baseUrl;
+  addon.logo = jps.logo;
+  addon.homepage = jps.homepage;
+  return { result: 0, onInstall: jps.onInstall };
 
 onInstall:
-  - setExtIpEnabled [${globals.nodeId}]: true
-  - installVPN
-  - if ("${settings.sslCertType}" == "lets-encrypt"):
-      installLetsEncrypt:
-        customDomains: ${settings.customDomains}
-  - setupFirewallAndShowSuccess
+  - script: 'return { result: 0, nodeDomain: "${nodes.centos7.master.url}".replace(/^https?:\/\/(.*)\/?$/, "$1") };'
+  - setGlobals: { nodeDomain: '${response.nodeDomain}' }
+  - install:
+      nodeGroup: ${nodes.centos7.nodeGroup}
+      settings:
+        mode: ${settings.mode:anonymizer}
+        sslCertType: ${settings.sslCertType:self-signed}
+        customDomains: ${settings.customDomains:}
+      jps:
+        type: update
+        id: openvpn-as-addon
+        permanent: true
 
-onUninstall:
-  - if ("${settings.sslCertType}" == "lets-encrypt"):
-      callSslScript:
-        action: uninstall
-  - cleanIptablesCustom
-  - cmd [${globals.nodeId}]: |-
-      rpm -e openvpn-as
-      rm -rf ${globals.workDir}
-      /usr/bin/jem firewall fwstart
-      sed -i '/.*# create TUN device/d' /etc/rc.d/rc.local
-      for i in $(iptables -S | grep AS0_ | awk '{print $2}' | uniq); do iptables -F $i && iptables -Z $i && iptables -X $i; done
-    user: root
+        name: OpenVPN Access Server Add-On
+        description:
+          short: Full featured secure network tunneling VPN
 
-actions:
-  installVPN:
-    - checkTunDevice
-    - cmd [${globals.nodeId}]: |-
-        yum update iptables -y
-        rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
-        yum -y install openvpn-as
-        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
-        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
-        ${globals.ovpn}/confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
-        if [ "${settings.anonymize}" == "true" ]; then anonymize_prop=false; else anonymize_prop=true; fi;
-        ${globals.ovpn}/confdba --mod --key=vpn.client.routing.reroute_dns --value=${anonymize_prop} --prof=Default
-        echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}' && {
-          ${globals.ovpn}/confdba -mk -'vpn.server.daemon.tcp.n_daemons' -v '1';
-          ${globals.ovpn}/confdba -mk -'vpn.server.daemon.udp.n_daemons' -v '1'; }
-        ${globals.ovpn}/sacli --key "vpn.server.daemon.tcp.n_daemons" --value "1" ConfigPut
-        ${globals.ovpn}/sacli --key "vpn.server.daemon.udp.n_daemons" --value "1" ConfigPut
-        ${globals.ovpn}/sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
-        ${globals.ovpn}/sacli --restart_mode=cold Start
-      user: root
+        buttons:
+          - caption: Client UI
+            href: https://${globals.nodeDomain}/
 
-  checkTunDevice:
-    cmd [${globals.nodeId}]: |-
-      modprobe tun;
-      createTunDev='[ ! -e /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
-      eval $createTunDev && echo "$createTunDev # create TUN device" >> /etc/rc.d/rc.local;
-      exit 0;
-    user: root
+          - caption: Admin UI
+            href: https://${globals.nodeDomain}/admin
 
-  setupFirewall:
-    - cleanIptablesCustom
-    - cmd [${globals.nodeId}]:
-        curl '${baseUrl}/scripts/iptables-custom' |
-        sed 's/{{PUBLIC_IP}}/${this.ip}/g;
-             s/{{OVPN_UDP_PORT}}/${globals.ovpnPortUDP}/g;
-             s/{{OVPN_TCP_PORT}}/${globals.ovpnPortTCP}/g;
-             s/{{OVPN_WEB_PORT}}/${globals.webUiPort}/g;' >> ${globals.iptablesCustom};
-        if grep -q 'FIREWALL_ENABLED' /etc/jelastic/metainf.conf ; then
-            sed -i -re 's/FIREWALL_ENABLED=([0-9]+)/FIREWALL_ENABLED=1/g' /etc/jelastic/metainf.conf ;
-        else
-            echo -e '' >> /etc/jelastic/metainf.conf ;
-            echo -e 'FIREWALL_ENABLED=1' >> /etc/jelastic/metainf.conf ;
-            sed -i -re '/^$/d' /etc/jelastic/metainf.conf ;
-        fi ;
-        /usr/bin/jem firewall fwstart;
-      user: root
+          - menu:
+              - caption: Configure
+                settings: main
+                action: configureVPN
 
-  cleanIptablesCustom:
-    cmd [${globals.nodeId}]: |-
-      [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0
-    user: root
+              - caption: Reset Password
+                confirmText: Reset OpenVPN Access Server admin password?
+                action: resetPassword
 
-  installLetsEncrypt:
-    - cmd [${globals.nodeId}]:
-        mkdir -p $(dirname ${globals.letsEncryptDeployHook});
-        printf '#!/bin/bash\n
-               ${globals.ovpn}/sacli --key "cs.priv_key"  --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/privkey.pem" ConfigPut\n
-               ${globals.ovpn}/sacli --key "cs.cert"      --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/cert.pem" ConfigPut\n
-               ${globals.ovpn}/sacli --key "cs.ca_bundle" --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/fullchain.pem" ConfigPut\n
-               ${globals.ovpn}/sacli start' > ${globals.letsEncryptDeployHook};
-        mkdir -p $(dirname ${globals.letsEncryptUndeployHook});
-        printf '#!/bin/bash\n
-               ${globals.ovpn}/sacli --key "cs.priv_key" ConfigDel\n
-               ${globals.ovpn}/sacli --key "cs.ca_bundle" ConfigDel\n
-               ${globals.ovpn}/sacli --key "cs.cert" ConfigDel\n
-               ${globals.ovpn}/sacli start' > ${globals.letsEncryptUndeployHook};
-      user: root
-    - script: |
-        var customDomains = "${this.customDomains}",
-            domain = customDomains || "${targetNodes.master.url}".replace(/^https?:\/\/(.*)\/?$/, "$1");
+        onInstall:
+          - installVPN
+          - configureVPN:
+              extIp: ${nodes.centos7.master.extIPs[0]}
+              mode: ${settings.mode}
+              sslCertType: ${settings.sslCertType}
+              customDomains: ${settings.customDomains}
+              init: true
 
-        return {
-          result: 0,
-          onAfterReturn: {
-            script: "${globals.letsEncryptBaseUrl}/scripts/create-installation-script.js?_r=${fn.random}",
-            cronTime: "0 ${fn.random(1,6)} * * *",
-            baseUrl: "${globals.letsEncryptBaseUrl}",
-            baseDir: "${globals.letsEncryptBaseDir}",
-            customDomains: domain,
-            scriptName: "${env.envName}-${globals.letsEncryptScriptSufix}",
-            nodeId: "${globals.nodeId}",
-            deployHook: "${globals.letsEncryptDeployHook}",
-            undeployHook: "${globals.letsEncryptDeployHook}",
-            test: !customDomains
-          }
-        };
+        actions:
+          installVPN:
+            - checkTunDevice
+            - cmd [${globals.nodeId}]: |-
+                yum update iptables -y
+                rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
+                yum -y install openvpn-as dnsmasq
+                systemctl enable dnsmasq.service --now
+                echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}'
+                cd ${globals.ovpn}
 
-  callSslScript:
-    script: |
-      var resp = jelastic.dev.scripting.Eval(appid, session, '${env.envName}-${globals.letsEncryptScriptSufix}', {action:'${this.action}'});
-      if (resp.result == 0 && typeof resp.response === 'object' && resp.response.result != 0) resp = resp.response;
-      return resp;
+                ./confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
+                ./confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
+                ./confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
+                ./sacli --key "vpn.client.routing.inter_client" --value "false" ConfigPut
+                ./sacli --key "vpn.server.daemon.tcp.n_daemons" --value "1" ConfigPut
+                ./sacli --key "vpn.server.daemon.udp.n_daemons" --value "1" ConfigPut
+                ./sacli --key "vpn.server.routing.gateway_access" --value "true" ConfigPut
+                ./sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
 
-  configureSsl:
-    - if ("${this.sslCertType}" == "lets-encrypt"):
-        installLetsEncrypt:
-          customDomains: ${this.customDomains}
-    - if ("${this.sslCertType}" == "self-signed"):
-        callSslScript:
-          action: uninstall
+                AR=($(echo '${globals.privateNetworks}' | sed "s/[[:space:]]*,[[:space:]]*/ /g"));
+                length=${#AR[@]}
+                for (( i = 0; i < length; i++ ))
+                do
+                  ./sacli --key "vpn.server.routing.private_network.$i" --value "${AR[$i]}" ConfigPut;
+                done
 
-  setupFirewallAndShowSuccess:
-    script [${globals.nodeId}]: |
-      var resp = jelastic.env.control.GetEnvInfo("${env.envName}", session);
-      if (resp.result !== 0) return resp;
-      var nodes = resp.nodes;
+          configureVPN:
+            - if (!"${this.extIp:}"):
+                - env.control.GetNodeInfo [${globals.nodeId}]
+                - set: { extIp: "${response.node.extIPs[0]}" }
+            - if ("${this.mode}" == "anonymizer"):
+                - cmd [${globals.nodeId}]: |-
+                    cd ${globals.ovpn}
+                    ./sacli --key "vpn.server.routing.private_access" --value "no" ConfigPut
+                    ./sacli --key "vpn.client.routing.reroute_gw" --value "true" ConfigPut
+                    ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
+                    ./sacli --key "vpn.server.dhcp_option.dns.0" --value "8.8.8.8" ConfigPut
+                    ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.4.4" ConfigPut
+                    ./sacli --restart --restart_mode=cold Start
+                - setupFirewall:
+                    ip: ${this.extIp}
+                    privateNetworks: ''
+            - else:
+                - cmd [${globals.nodeId}]: |-
+                    cd ${globals.ovpn}
+                    ./sacli --key "vpn.server.routing.private_access" --value "nat" ConfigPut
+                    ./sacli --key "vpn.client.routing.reroute_gw" --value "false" ConfigPut
+                    ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
+                    ./sacli --key "vpn.server.dhcp_option.dns.0" --value "${this.extIp}" ConfigPut
+                    ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.8.8" ConfigPut
+                    ./sacli --restart --restart_mode=cold Start
+                - setupFirewall:
+                    ip: ${this.extIp}
+                    privateNetworks: ${globals.privateNetworks}
 
-      var publicIP;
-      for (i = nodes.length; i--;) {
-        if (nodes[i].id == nodeId) {
-          publicIP = nodes[i].extIPs[0];
-          break;
-        }
-      }
+            - if ("${this.sslCertType}" == "lets-encrypt"):
+                installLetsEncrypt:
+                  customDomains: ${this.customDomains}
+            - if ("${this.sslCertType}" == "self-signed" && "${this.init}" != "true"):
+                callSslScript:
+                  action: uninstall
 
-      success = success.replace(/{{URI}}/g, "${targetNodes.master.url}:${globals.webUiPort}".replace(/^https?/, "https"));
+          checkTunDevice:
+            cmd [${globals.nodeId}]: |-
+              modprobe tun;
+              createTunDev='[ ! -e /dev/net/tun ] && mkdir -p /dev/net && mknod /dev/net/tun c 10 200 && chmod 0666 /dev/net/tun';
+              eval $createTunDev && echo "$createTunDev # create TUN device" >> /etc/rc.d/rc.local;
+              exit 0;
 
-      return {
-        result: 0,
-        onAfterReturn: [
-          { "setupFirewall" : { "ip" : publicIP } },
-          { "return" : { "type": "success", "message": success, "email": success } }
-        ]
-      };
-    success: |
-      Admin UI is available here: **[{{URI}}/admin]({{URI}}/admin)**.
+          setupFirewall:
+            - cleanIptablesCustom
+            - script:
+                type: ejs
+                body: ${baseUrl}/scripts/iptables-custom.ejs
+                params:
+                  publicIP: ${this.ip}
+                  ovpnPortUDP: ${globals.ovpnPortUDP}
+                  ovpnPortTCP: ${globals.ovpnPortTCP}
+                  webUiPort: ${globals.webUiPort}
+                  privateNetworks: ${this.privateNetworks}
 
-      Connection profiles can be downloaded here: **[Client UI]({{URI}})**.
+            - cmd [${globals.nodeId}]:
+                echo '${response.body}' >> ${globals.iptablesCustom};
+                if grep -q 'FIREWALL_ENABLED' /etc/jelastic/metainf.conf ; then
+                sed -i -re 's/FIREWALL_ENABLED=([0-9]+)/FIREWALL_ENABLED=1/g' /etc/jelastic/metainf.conf ;
+                else
+                echo -e '' >> /etc/jelastic/metainf.conf ;
+                echo -e 'FIREWALL_ENABLED=1' >> /etc/jelastic/metainf.conf ;
+                sed -i -re '/^$/d' /etc/jelastic/metainf.conf ;
+                fi ;
+                /usr/bin/jem firewall fwstop ;
+                /usr/bin/jem firewall fwstart ;
 
-      * Username: **${globals.username}**
-      * Password: **${globals.password}**
+          resetPassword:
+            - set: { password: "${fn.password(14)}" }
+            - cmd [${globals.nodeId}]: |-
+                echo -e '${this.password}' | sudo passwd --stdin '${globals.username}' ;
+                ${globals.ovpn}/sacli Stop ;
+                ${globals.ovpn}/sacli --restart --restart_mode=cold Start ;
+            - return:
+                type: info
+                message: |
+                  New OpenVPN Access Server Credentials:
+                  * Username: **${globals.username}**
+                  * Password: **${this.password}**
 
-      OpenVPN client applications:
-      * [OpenVPN Connect for Windows 7,8,10](https://openvpn.net/downloads/openvpn-connect-v2-windows.msi)
-      * [OpenVPN Connect for Mac OS X](https://openvpn.net/downloads/openvpn-connect-v2-macos.dmg)
-      * [OpenVPN Connect for Android](https://openvpn.net/clients/index.php?client=openvpn_connect_android)
-      * [OpenVPN Connect for iOS](https://openvpn.net/clients/index.php?client=openvpn_connect_ios)
-      * [OpenVPN for Linux](https://openvpn.net/clients/index.php?client=openvpn_linux)
+          cleanIptablesCustom:
+            cmd [${globals.nodeId}]: |-
+              [ -f ${globals.iptablesCustom} ] && sed -i '/# BOF OpenVPN/,/# EOF OpenVPN/d' ${globals.iptablesCustom}; exit 0
+
+          installLetsEncrypt:
+            - cmd [${globals.nodeId}]:
+                mkdir -p $(dirname ${globals.letsEncryptDeployHook});
+                printf '#!/bin/bash\n
+                ${globals.ovpn}/sacli --key "cs.priv_key"  --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/privkey.pem" ConfigPut\n
+                ${globals.ovpn}/sacli --key "cs.cert"      --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/cert.pem" ConfigPut\n
+                ${globals.ovpn}/sacli --key "cs.ca_bundle" --value_file "${globals.letsEncryptBaseDir}var/lib/jelastic/keys/fullchain.pem" ConfigPut\n
+                ${globals.ovpn}/sacli start' > ${globals.letsEncryptDeployHook};
+                mkdir -p $(dirname ${globals.letsEncryptUndeployHook});
+                printf '#!/bin/bash\n
+                ${globals.ovpn}/sacli --key "cs.priv_key" ConfigDel\n
+                ${globals.ovpn}/sacli --key "cs.ca_bundle" ConfigDel\n
+                ${globals.ovpn}/sacli --key "cs.cert" ConfigDel\n
+                ${globals.ovpn}/sacli start' > ${globals.letsEncryptUndeployHook};
+
+            - script: |
+                var customDomains = "${this.customDomains}",
+                    domain = customDomains || "${globals.nodeDomain}";
+
+                return {
+                  result: 0,
+                  onAfterReturn: {
+                    script: "${globals.letsEncryptBaseUrl}/scripts/create-installation-script.js?_r=${fn.random}",
+                    cronTime: "0 ${fn.random(1,6)} * * *",
+                    baseUrl: "${globals.letsEncryptBaseUrl}",
+                    baseDir: "${globals.letsEncryptBaseDir}",
+                    customDomains: domain,
+                    scriptName: "${env.envName}-${globals.letsEncryptScriptSufix}",
+                    nodeId: "${globals.nodeId}",
+                    deployHook: "${globals.letsEncryptDeployHook}",
+                    undeployHook: "${globals.letsEncryptDeployHook}",
+                    test: !customDomains
+                  }
+                };
+
+          callSslScript:
+            script: |
+              import com.hivext.api.Response;
+
+              var action = "${this.action}";
+              var scriptName = "${env.envName}-${globals.letsEncryptScriptSufix}";
+              var resp = api.dev.scripting.GetScript(scriptName);
+              if (action == "uninstall" && resp.result == Response.SCRIPT_NOT_FOUND) return { result: 0 };
+              if (resp.result != 0) return resp;
+
+              resp = api.dev.scripting.Eval(appid, session, scriptName, {action:'${this.action}'});
+              if (resp.result == 0 && typeof resp.response === 'object' && resp.response.result != 0) resp = resp.response;
+              return resp;
+
+success: |
+  Admin UI is available here: **[https://${globals.nodeDomain}/admin](https://${globals.nodeDomain}/admin)**.
+
+  Connection profiles can be downloaded here: **[Client UI](https://${globals.nodeDomain}/)**.
+
+  * Username: **${globals.username}**
+  * Password: **${globals.password}**
+
+  OpenVPN client applications:
+  * [OpenVPN Connect for Windows 7,8,10](https://openvpn.net/downloads/openvpn-connect-v2-windows.msi)
+  * [OpenVPN Connect for Mac OS X](https://openvpn.net/downloads/openvpn-connect-v2-macos.dmg)
+  * [OpenVPN Connect for Android](https://openvpn.net/clients/index.php?client=openvpn_connect_android)
+  * [OpenVPN Connect for iOS](https://openvpn.net/clients/index.php?client=openvpn_connect_ios)
+  * [OpenVPN for Linux](https://openvpn.net/clients/index.php?client=openvpn_linux)
