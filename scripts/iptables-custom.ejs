@@ -75,7 +75,7 @@ COMMIT
 <% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
 -A AS0_IN_PRE -d <%= privateNetworks[i] %> -j AS0_IN
 <%}%>
--A AS0_IN_PRE -j <%= privateNetworks.length ? "DROP" : "ACCEPT" %>
+-A AS0_IN_PRE -j ACCEPT
 -A AS0_IN_ROUTE -j MARK --set-xmark 0x4000000/0x4000000
 -A AS0_IN_ROUTE -j ACCEPT
 -A AS0_OUT -j AS0_OUT_POST

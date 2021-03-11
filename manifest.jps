@@ -84,8 +84,8 @@ globals:
   iptablesCustom: /etc/sysconfig/iptables-custom
   ovpn: ${globals.workDir}/scripts
   ovpnPortUDP: 1194
-  ovpnPortTCP: 1443
-  webUiPort: 443
+  ovpnPortTCP: 443
+  webUiPort: 943
   letsEncryptBaseUrl: https://raw.githubusercontent.com/jelastic-jps/lets-encrypt/master
   letsEncryptBaseDir: ${globals.workDir}/letsencrypt/
   letsEncryptDeployHook: ${globals.letsEncryptBaseDir}root/onDeploy.sh
@@ -122,10 +122,10 @@ onInstall:
 
         buttons:
           - caption: Client UI
-            href: https://${globals.nodeDomain}/
+            href: https://${globals.nodeDomain}:${globals.webUiPort}/
 
           - caption: Admin UI
-            href: https://${globals.nodeDomain}/admin
+            href: https://${globals.nodeDomain}:${globals.webUiPort}/admin
 
           - menu:
               - caption: Configure
@@ -134,6 +134,7 @@ onInstall:
 
               - caption: Reset Password
                 confirmText: Reset OpenVPN Access Server admin password?
+                loadingText: Resetting password...
                 action: resetPassword
 
         onInstall:
@@ -162,7 +163,12 @@ onInstall:
                 ./sacli --key "vpn.client.routing.inter_client" --value "false" ConfigPut
                 ./sacli --key "vpn.server.daemon.tcp.n_daemons" --value "1" ConfigPut
                 ./sacli --key "vpn.server.daemon.udp.n_daemons" --value "1" ConfigPut
+                ./sacli --key "vpn.server.daemon.udp.port" --value "${globals.ovpnPortUDP}" ConfigPut
+                ./sacli --key "vpn.server.daemon.tcp.port" --value "${globals.ovpnPortTCP}" ConfigPut
+                ./sacli --key "cs.https.port" --value "${globals.webUiPort}" ConfigPut
                 ./sacli --key "vpn.server.routing.gateway_access" --value "true" ConfigPut
+                ./sacli --key "vpn.client.routing.reroute_gw" --value "true" ConfigPut
+                ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
                 ./sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
 
                 AR=($(echo '${globals.privateNetworks}' | sed "s/[[:space:]]*,[[:space:]]*/ /g"));
@@ -180,11 +186,9 @@ onInstall:
                 - cmd [${globals.nodeId}]: |-
                     cd ${globals.ovpn}
                     ./sacli --key "vpn.server.routing.private_access" --value "no" ConfigPut
-                    ./sacli --key "vpn.client.routing.reroute_gw" --value "true" ConfigPut
-                    ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.0" --value "8.8.8.8" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.4.4" ConfigPut
-                    ./sacli --restart --restart_mode=cold Start
+                    service openvpnas restart
                 - setupFirewall:
                     ip: ${this.extIp}
                     privateNetworks: ''
@@ -192,11 +196,9 @@ onInstall:
                 - cmd [${globals.nodeId}]: |-
                     cd ${globals.ovpn}
                     ./sacli --key "vpn.server.routing.private_access" --value "nat" ConfigPut
-                    ./sacli --key "vpn.client.routing.reroute_gw" --value "false" ConfigPut
-                    ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.0" --value "${this.extIp}" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.8.8" ConfigPut
-                    ./sacli --restart --restart_mode=cold Start
+                    service openvpnas restart
                 - setupFirewall:
                     ip: ${this.extIp}
                     privateNetworks: ${globals.privateNetworks}
@@ -306,9 +308,9 @@ onInstall:
               return resp;
 
 success: |
-  Admin UI is available here: **[https://${globals.nodeDomain}/admin](https://${globals.nodeDomain}/admin)**.
+  Admin UI is available here: **[https://${globals.nodeDomain}:${globals.webUiPort}/admin](https://${globals.nodeDomain}:${globals.webUiPort}/admin)**.
 
-  Connection profiles can be downloaded here: **[Client UI](https://${globals.nodeDomain}/)**.
+  Connection profiles can be downloaded here: **[Client UI](https://${globals.nodeDomain}:${globals.webUiPort}/)**.
 
   * Username: **${globals.username}**
   * Password: **${globals.password}**
