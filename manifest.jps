@@ -11,11 +11,7 @@ homepage: https://openvpn.net/access-server/
 description:
   short: Full featured secure network tunneling VPN
   text: |
-    OpenVPN Access Server is a full featured secure network tunneling VPN software solution that integrates OpenVPN server
-    capabilities, enterprise management capabilities, simplified OpenVPN Connect UI, and OpenVPN Client software packages that
-    accommodate Windows, MAC, and Linux OS environments. OpenVPN Access Server supports a wide range of configurations,
-    including secure and granular remote access to internal network and/or private cloud network resources and applications with
-    fine-grained access control.
+    VPN stands for Virtual Private Network. VPNs send traffic between 2 or more devices on a network in an encrypted tunnel. It allows to increase privacy and anonymity online and overcome geographic-based blocking and censorship.
 
 settings:
   fields:
