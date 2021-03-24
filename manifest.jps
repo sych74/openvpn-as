@@ -232,7 +232,7 @@ onInstall:
             - setupMode:
                 mode: ${this.mode}
                 extIp: ${this.extIp}
-            - if (${this.leAddon:true}): installLetsEncrypt
+            - if ('${this.leAddon}' === 'true'): installLetsEncrypt
 
           checkTunDevice:
             cmd [cp]: |-
