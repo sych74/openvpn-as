@@ -59,6 +59,7 @@ settings:
         text: Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates for OpenVPN Admin Web Server.
 
 ssl: true
+requiredFeatures: extip
 
 nodes:
   image: jelastic/centosvps
