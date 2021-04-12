@@ -55,7 +55,4 @@ If necessary you can change the mode of VPN solution via **OpenVPN Access Server
 <img src="images/change-mode.png" width="400">
 </p>
 
-## Deploy Now
-Press **DEPLOY TO JELASTIC** to deploy OpenVPN solution to a certified Jelastic partner from the distributed network of independent data center service providers. 
-
-[![Deploy](https://github.com/jelastic-jps/git-push-deploy/raw/master/images/deploy-to-jelastic.png)](https://jelastic.com/install-application/?manifest=https://github.com/jelastic-jps/openvpn-as/blob/master/manifest.jps) 
+Try out the OpenVPN Access Server solution with [Jelastic Multi-Cloud PaaS](https://jelastic.cloud) 
