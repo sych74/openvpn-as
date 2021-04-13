@@ -3,7 +3,7 @@ version: 1.8.1
 
 id: openvpn-as
 name: OpenVPN Access Server
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/openvpn-as/JE-38946
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/openvpn-as/master
 logo: images/logo.png
 categories:
   - apps/dev-and-admin-tools
