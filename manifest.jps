@@ -54,6 +54,28 @@ settings:
         y: -1
         text: Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates for OpenVPN Admin Web Server.
 
+onBeforeInit: |
+  var settings = jps.settings, fields = settings.fields;  
+  var resp = api.billing.account.GetQuotas('environment.externalip.enabled');;
+  if (resp.result != 0) return resp;
+
+  if (!resp.array[0].value) {
+    jps.nodes.extip = false;
+    
+    resp = api.billing.account.GetAccount();
+    if (resp.result != 0) return resp;
+        
+    var text = "Public IPv4 address is not enabled for your account. ";    
+    text += ((resp.groupType == "trial") ? "Upgrade your account" : "Contact support") + " to extend the possibilities.";
+        
+    settings.fields = fields.concat([
+      { type: "displayfield", cls: "warning", hideLabel: true, height: 25, "markup": text, },
+      { type: "compositefield", height: 0, hideLabel: true, width: 0, items: [{ height: 0, type: "string", required: true}]}
+    ]);        
+  }
+  
+  return { result: 0, settings: settings };
+
 ssl: true
 requiredFeatures: extip
 
