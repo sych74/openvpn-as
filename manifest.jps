@@ -69,7 +69,7 @@ onBeforeInit: |
     text += ((resp.groupType == "trial") ? "Upgrade your account" : "Contact support") + " to extend the possibilities.";
         
     settings.fields = fields.concat([
-      { type: "displayfield", cls: "warning", hideLabel: true, height: 25, "markup": text, },
+      { type: "displayfield", cls: "warning", hideLabel: true, height: 25, "markup": text },
       { type: "compositefield", height: 0, hideLabel: true, width: 0, items: [{ height: 0, type: "string", required: true}]}
     ]);        
   }
