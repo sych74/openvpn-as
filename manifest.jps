@@ -25,13 +25,13 @@ settings:
       name: mode
       default: anonymizer
       values:
-        - caption: Anonymizer
+        - caption: Secure Internet Access
           value: anonymizer
           tooltip:
             text: Route client Internet traffic through the VPN
             maxWidth: 180
             y: -1
-        - caption: Internal network access
+        - caption: Secure Remote Access
           value: internalNetworkAccess
           tooltip:
             y: -1
@@ -45,7 +45,7 @@ settings:
       hideLabel: true
       height: 0
 
-    - caption: Install Let's Encrypt SSL with Auto-Renewal for Admin Web Server
+    - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: leAddon
       value: true
