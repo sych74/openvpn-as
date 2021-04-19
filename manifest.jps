@@ -125,18 +125,14 @@ onInstall:
                 - caption: Secure Internet Access
                   value: anonymizer
                   tooltip:
-                    text: Route client Internet traffic through the VPN
-                    maxWidth: 180
+                    text: Encrypted tunneling of the traffic to the Internet and transmitting the data via VPN to prevent threats from compromised networks. The DNS queries are resolved by Google Public DNS.
                     y: -1
                 - caption: Secure Remote Access
                   value: internalNetworkAccess
                   tooltip:
                     y: -1
                     text: |
-                      Client can access own private cloud network.<br><br>
-                      <b>Note</b>:<br>
-                      <ul style="list-style: disc inside;"><li>private cloud network is limited with the same <a href="https://docs.jelastic.com/environment-isolation/">isolated environment group</a> or with the same <a href="https://docs.jelastic.com/environment-regions/">region</a> where OpenVPN Access Server is installed</li>
-                      <li>clients will use OpenVPN node as a DNS server</li></ul>
+                      Interconnected private networks for authorized access within the <a href="https://docs.jelastic.com/environment-isolation/">isolated environment group</a> or <a href="https://docs.jelastic.com/environment-regions">region</a> where OpenVPN is installed. The DNS queries are resolved by internal platform DNS servers that makes environment and container hostnames associated with their private IP addresses.
 
         buttons:
           - caption: Client UI
