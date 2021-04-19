@@ -11,25 +11,25 @@ OpenVPN Access Server is a set of tools that simplify the rapid deployment of a 
 Sign in your Jelastic account and import the [manifest.jps](https://github.com/jelastic-jps/openvpn-as/blob/master/manifest.jps) by pressing **Import** button. 
 
 <p align="left"> 
-<img src="images/import.png" width="500">
+<img src="images/import.png" width="600">
 </p>
 
 Choose an installation mode:   
 
-  - **Anonymizer** allows to hide user's identity when browsing the Internet
-  - **Internal network access** provides an access to the private network within in the Cloud:
+  - **Secure Internet Access** provides secured Internet access and prevents threats from rogue public Wi-Fi hotspots and untrusted networks
+  - **Secure Remote Access** provides an access to the private network within in the Cloud:
       - private cloud network is limited with the same [isolated environment group](https://docs.jelastic.com/environment-isolation/) or with the same [region](https://docs.jelastic.com/environment-regions/) where OpenVPN Access Server is installed
-    - clients will use OpenVPN node as a DNS server
+      - clients will use OpenVPN node as a query forwarder to the DNS server of Jelastic platform that makes environment and container hostnames associated with their private IP addresses
   -  Pick [Let's Encrypt Add-On](https://jelastic.com/blog/free-ssl-certificates-with-lets-encrypt/) installation to secure OpenVPN Access Server web admin insterface with help of valid SSL certificate.
   
 <p align="left"> 
-<img src="images/install.png" width="500">
+<img src="images/install.png" width="600">
 </p>
 
 The expected topology looks as follows:
 
 <p align="left"> 
-<img src="images/topology-w-IP.png" width="400">
+<img src="images/topology-w-IP.png" width="500">
 </p>
 
 ## OpenVPN Management
