@@ -190,7 +190,6 @@ onInstall:
                 rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
                 yum -y install openvpn-as dnsmasq
                 systemctl enable dnsmasq.service --now
-                echo -e '${globals.password}' | sudo passwd --stdin '${globals.username}'
                 cd ${globals.ovpn}
 
                 ./confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
@@ -206,7 +205,8 @@ onInstall:
                 ./sacli --key "vpn.client.routing.reroute_gw" --value "true" ConfigPut
                 ./sacli --key "vpn.client.routing.reroute_dns" --value "custom" ConfigPut
                 ./sacli --user '${globals.username}' --key "prop_autologin" --value "true" UserPropPut
-
+                ./sacli --user '${globals.username}' --new_pass '${globals.password}' SetLocalPassword
+            
                 AR=($(echo '${globals.privateNetworks}' | sed "s/[[:space:]]*,[[:space:]]*/ /g"));
                 length=${#AR[@]}
                 for (( i = 0; i < length; i++ ))
@@ -272,7 +272,7 @@ onInstall:
           resetPassword:
             - set: { password: "${fn.password(14)}" }
             - cmd [cp]: |-
-                echo -e '${this.password}' | sudo passwd --stdin '${globals.username}' ;
+                ${globals.ovpn}/sacli --user '${globals.username}' --new_pass '${this.password}' SetLocalPassword ;
                 ${globals.ovpn}/sacli Stop ;
                 ${globals.ovpn}/sacli --restart --restart_mode=cold Start ;
             - return:
