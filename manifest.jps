@@ -199,6 +199,7 @@ onInstall:
             - cmd [cp]: |-
                 yum update iptables -y
                 rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
+                yum -y install centos-release-scl-rh
                 yum -y install openvpn-as dnsmasq
                 systemctl enable dnsmasq.service --now
                 cd ${globals.ovpn}
