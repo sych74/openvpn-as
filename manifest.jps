@@ -75,11 +75,7 @@ onBeforeInit: |
 ssl: true
 requiredFeatures: extip
 
-nodes:
-  image: jelastic/centosvps
-  cloudlets: 8
-  nodeGroup: cp
-  extip: true
+nodes: definedInOnBeforeInstall
 
 globals:
   username: openvpn
@@ -101,6 +97,7 @@ onBeforeInstall: |
 
   var client = new HttpClient(),
       getMethod,
+      nodeType,
       response,
       status,
       resp,
@@ -124,8 +121,9 @@ onBeforeInstall: |
   addon.baseUrl = jps.baseUrl;
   addon.logo = jps.logo;
   addon.homepage = jps.homepage;
-
-  return { result: 0, onInstall: jps.onInstall, nodes: jps.nodes };
+  
+  nodeType = (${fn.compareEngine(8.3.1)} >= 0) ? "almalinux-vps" : "centos-vps";
+  return { result: 0, onInstall: jps.onInstall, nodes: [{nodeType: nodeType, cloudlets: 8, nodeGroup: "cp", extip: true}] };
 
 onInstall:
   - install:
@@ -196,14 +194,24 @@ onInstall:
         actions:
           installVPN:
             - checkTunDevice
+            - if (/centos/.test("${nodes.cp.nodeType}")):
+              - cmd [cp]: |-
+                  yum update iptables -y
+                  rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
+                  yum -y install centos-release-scl-rh
+                  yum -y install openvpn-as dnsmasq
+                  systemctl enable dnsmasq.service --now
+            - elif (/almalinux/.test("${nodes.cp.nodeType}")):
+              - cmd [cp]: |-
+                  dnf update iptables -y
+                  rpm -q --queryformat '%{VERSION}' almalinux-release | cut -d. -f1 | dnf -y install https://as-repository.openvpn.net/as-repo-rhel$(cat).rpm
+                  dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna
+                  systemctl enable dnsmasq.service --now
+            - else:
+              - log: werwerwerwerwer
+                
             - cmd [cp]: |-
-                yum update iptables -y
-                rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
-                yum -y install centos-release-scl-rh
-                yum -y install openvpn-as dnsmasq
-                systemctl enable dnsmasq.service --now
                 cd ${globals.ovpn}
-
                 ./confdba --mod --key=iptables.vpn.disable.filter --value=True --prof=Default
                 ./confdba --mod --key=iptables.vpn.disable.nat --value=True --prof=Default
                 ./confdba --mod --key=iptables.vpn.disable.mangle --value=True --prof=Default
