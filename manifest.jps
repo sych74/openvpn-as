@@ -205,7 +205,7 @@ onInstall:
               - cmd [cp]: |-
                   dnf update iptables -y
                   rpm -q --queryformat '%{VERSION}' almalinux-release | cut -d. -f1 | dnf -y install https://as-repository.openvpn.net/as-repo-rhel$(cat).rpm
-                  dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna
+                  dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna iptables-services
                   systemctl enable dnsmasq.service --now
             - else:
               - log: werwerwerwerwer
