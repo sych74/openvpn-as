@@ -81,7 +81,6 @@ globals:
   username: openvpn
   password: ${fn.password(14)}
   workDir: /usr/local/openvpn_as
-  iptablesCustom: /etc/sysconfig/iptables-custom
   ovpn: ${globals.workDir}/scripts
   ovpnPortUDP: 1194
   ovpnPortTCP: 443
@@ -195,6 +194,9 @@ onInstall:
           installVPN:
             - checkTunDevice
             - if (/centos/.test("${nodes.cp.nodeType}")):
+              - setGlobals:
+                  iptables: iptables
+                  iptablesCustom: /etc/sysconfig/iptables-custom
               - cmd [cp]: |-
                   yum update iptables -y
                   rpm -q --queryformat '%{VERSION}' centos-release | yum -y install https://as-repository.openvpn.net/as-repo-centos$(cat).rpm
@@ -202,10 +204,12 @@ onInstall:
                   yum -y install openvpn-as dnsmasq
                   systemctl enable dnsmasq.service --now
             - elif (/almalinux/.test("${nodes.cp.nodeType}")):
+              - setGlobals:
+                  iptables: nftables
+                  iptablesCustom: /etc/nftables/container-defined.nft
               - cmd [cp]: |-
-                  dnf update iptables -y
                   rpm -q --queryformat '%{VERSION}' almalinux-release | cut -d. -f1 | dnf -y install https://as-repository.openvpn.net/as-repo-rhel$(cat).rpm
-                  dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna iptables-services
+                  dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna
                   systemctl enable dnsmasq.service --now
             - else:
                 return:
@@ -278,7 +282,7 @@ onInstall:
             - cleanIptablesCustom
             - script:
                 type: ejs
-                body: ${baseUrl}/scripts/iptables-custom.ejs
+                body: ${baseUrl}/scripts/${globals.iptables}-custom.ejs
                 params:
                   publicIP: ${this.ip}
                   ovpnPortUDP: ${globals.ovpnPortUDP}
@@ -286,10 +290,15 @@ onInstall:
                   webUiPort: ${globals.webUiPort}
                   privateNetworks: ${this.privateNetworks}
 
-            - cmd [cp]:
-                echo '${response.body}' >> ${globals.iptablesCustom};
-                iptables-restore < ${globals.iptablesCustom};
-                service iptables save;
+            - if (/centos/.test("${nodes.cp.nodeType}")):
+              - cmd [cp]:
+                  echo '${response.body}' >> ${globals.iptablesCustom};
+                  iptables-restore < ${globals.iptablesCustom};
+                  service iptables save;
+            - if (/almalinux/.test("${nodes.cp.nodeType}")):
+              - cmd [cp]:
+                  echo '${response.body}' >> ${globals.iptablesCustom};
+                  nft -f ${globals.iptablesCustom}
 
           resetPassword:
             - set: { password: "${fn.password(14)}" }
