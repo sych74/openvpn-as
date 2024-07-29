@@ -1,0 +1,81 @@
+<% privateNetworks = privateNetworks ? privateNetworks.split(/\s*,\s*/) : [] %>
+# BOF OpenVPN
+nft add chain ip mangle AS0_MANGLE_PRE_REL_EST
+nft add chain ip mangle AS0_MANGLE_TUN
+nft 'add rule ip mangle PREROUTING ct state related,established counter jump AS0_MANGLE_PRE_REL_EST'
+nft 'add rule ip mangle PREROUTING iifname "as0t*" counter jump AS0_MANGLE_TUN'
+nft 'add rule ip mangle AS0_MANGLE_PRE_REL_EST counter accept'
+nft 'add rule ip mangle AS0_MANGLE_TUN counter meta mark set 0x2000000'
+nft 'add rule ip mangle AS0_MANGLE_TUN counter accept'
+nft add chain ip nat AS0_NAT
+nft add chain ip nat AS0_NAT_POST_REL_EST
+nft add chain ip nat AS0_NAT_PRE
+nft add chain ip nat AS0_NAT_PRE_REL_EST
+nft add chain ip nat AS0_NAT_TEST
+nft 'add rule ip nat PREROUTING iifname "as0t*" counter accept'
+nft 'add rule ip nat PREROUTING ct state related,established counter jump AS0_NAT_PRE_REL_EST'
+nft 'add rule ip nat POSTROUTING ct state related,established counter jump AS0_NAT_POST_REL_EST'
+nft 'add rule ip nat POSTROUTING mark and 0x2000000 == 0x2000000 counter jump AS0_NAT_PRE'
+nft 'add rule ip nat AS0_NAT oifname "venet0" counter masquerade'
+nft 'add rule ip nat AS0_NAT counter accept'
+nft 'add rule ip nat AS0_NAT_POST_REL_EST counter accept'
+nft 'add rule ip nat AS0_NAT_PRE mark and 0x8000000 == 0x8000000 counter jump AS0_NAT'
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+nft 'add rule ip nat AS0_NAT_PRE ip daddr <%= privateNetworks[i] %> counter jump AS0_NAT_TEST'
+<%}%>
+nft 'add rule ip nat AS0_NAT_PRE counter jump AS0_NAT'
+nft 'add rule ip nat AS0_NAT_PRE_REL_EST counter accept'
+nft 'add rule ip nat AS0_NAT_TEST oifname "as0t*" counter accept'
+nft 'add rule ip nat AS0_NAT_TEST mark and 0x4000000 == 0x4000000 counter accept'
+nft 'add rule ip nat AS0_NAT_TEST ip daddr 172.27.224.0/20 counter accept'
+nft 'add rule ip nat AS0_NAT_TEST counter jump AS0_NAT'
+nft add chain ip filter AS0_ACCEPT
+nft add chain ip filter AS0_IN
+nft add chain ip filter AS0_IN_NAT
+nft add chain ip filter AS0_IN_POST
+nft add chain ip filter AS0_IN_PRE
+nft add chain ip filter AS0_IN_ROUTE
+nft add chain ip filter AS0_OUT
+nft add chain ip filter AS0_OUT_LOCAL
+nft add chain ip filter AS0_OUT_POST
+nft add chain ip filter AS0_OUT_S2C
+nft add chain ip filter AS0_WEBACCEPT
+nft 'add rule ip filter INPUT udp dport 53 counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT tcp dport 53 counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT ct state related,established counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT iifname "lo" counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT mark and 0x2000000 == 0x2000000 counter jump AS0_IN_PRE'
+nft 'add rule ip filter INPUT ip daddr <%= publicIP %> ct state new udp dport <%= ovpnPortUDP %> counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT ip daddr <%= publicIP %> ct state new tcp dport <%= ovpnPortTCP %> counter jump AS0_ACCEPT'
+nft 'add rule ip filter INPUT ct state related,established counter jump AS0_WEBACCEPT'
+nft 'add rule ip filter INPUT ip daddr <%= publicIP %> ct state new tcp dport <%= webUiPort %> counter jump AS0_WEBACCEPT'
+nft 'add rule ip filter FORWARD ct state related,established counter jump AS0_ACCEPT'
+nft 'add rule ip filter FORWARD mark and 0x2000000 == 0x2000000 counter jump AS0_IN_PRE'
+nft 'add rule ip filter FORWARD oifname "as0t*" counter jump AS0_OUT_S2C'
+nft 'add rule ip filter OUTPUT oifname "as0t*" counter jump AS0_OUT_LOCAL'
+nft 'add rule ip filter AS0_ACCEPT counter accept'
+nft 'add rule ip filter AS0_IN ip daddr 172.27.224.1 counter accept'
+nft 'add rule ip filter AS0_IN counter jump AS0_IN_POST'
+nft 'add rule ip filter AS0_IN_NAT counter meta mark set mark or 0x8000000'
+nft 'add rule ip filter AS0_IN_NAT counter accept'
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+nft 'add rule ip filter AS0_IN_POST ip daddr <%= privateNetworks[i] %> counter accept'
+<%}%>
+nft 'add rule ip filter AS0_IN_POST oifname "as0t*" counter jump AS0_OUT'
+nft 'add rule ip filter AS0_IN_POST counter drop'
+nft 'add rule ip filter AS0_IN_PRE ct state new tcp dport 53 counter accept'
+nft 'add rule ip filter AS0_IN_PRE ct state new udp dport 53 counter accept'
+<% for (var i = 0, n = privateNetworks.length; i < n; i++) {%>
+nft 'add rule ip filter AS0_IN_PRE ip daddr <%= privateNetworks[i] %> counter jump AS0_IN'
+<%}%>
+nft 'add rule ip filter AS0_IN_PRE counter accept'
+nft 'add rule ip filter AS0_IN_ROUTE counter meta mark set mark or 0x4000000'
+nft 'add rule ip filter AS0_IN_ROUTE counter accept'
+nft 'add rule ip filter AS0_OUT counter jump AS0_OUT_POST'
+nft 'add rule ip filter AS0_OUT_LOCAL icmp type redirect counter drop'
+nft 'add rule ip filter AS0_OUT_LOCAL counter accept'
+nft 'add rule ip filter AS0_OUT_POST counter drop'
+nft 'add rule ip filter AS0_OUT_S2C counter jump AS0_OUT'
+nft 'add rule ip filter AS0_WEBACCEPT counter accept'
+# EOF OpenVPN
+<% return { result: 0, body: ___ViewO.join('') }; %>
