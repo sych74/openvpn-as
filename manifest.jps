@@ -208,7 +208,9 @@ onInstall:
                   dnf -y install openvpn-as dnsmasq python3-setuptools python3-idna iptables-services
                   systemctl enable dnsmasq.service --now
             - else:
-              - log: werwerwerwerwer
+                return:
+                  type: warning
+                  message: Unsupported operating system. Only AlmaLinux and CentOS are supported.
                 
             - cmd [cp]: |-
                 cd ${globals.ovpn}
