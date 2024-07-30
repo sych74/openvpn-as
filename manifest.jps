@@ -299,6 +299,9 @@ onInstall:
               - cmd [cp]:
                   echo '${response.body}' >> ${globals.iptablesCustom};
                   nft -f ${globals.iptablesCustom}
+            - cmd [cp]:
+                jem firewall enable;
+                jem firewall start;
 
           resetPassword:
             - set: { password: "${fn.password(14)}" }
