@@ -251,9 +251,10 @@ onInstall:
                     ./sacli --key "vpn.server.dhcp_option.dns.0" --value "8.8.8.8" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.4.4" ConfigPut
                     service openvpnas restart
-                - setupFirewall:
-                    ip: ${this.extIp}
-                    privateNetworks: ''
+                - if (${quota.firewall.enabled}):
+                  - setupFirewall:
+                      ip: ${this.extIp}
+                      privateNetworks: ''
             - else:
                 - cmd [cp]: |-
                     cd ${globals.ovpn}
@@ -261,9 +262,10 @@ onInstall:
                     ./sacli --key "vpn.server.dhcp_option.dns.0" --value "${this.extIp}" ConfigPut
                     ./sacli --key "vpn.server.dhcp_option.dns.1" --value "8.8.8.8" ConfigPut
                     service openvpnas restart
-                - setupFirewall:
-                    ip: ${this.extIp}
-                    privateNetworks: ${globals.privateNetworks}
+                - if (${quota.firewall.enabled}):
+                  - setupFirewall:
+                      ip: ${this.extIp}
+                      privateNetworks: ${globals.privateNetworks}
 
           configureVPN:
             - setupMode:
